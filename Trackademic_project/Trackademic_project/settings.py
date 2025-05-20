@@ -38,6 +38,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'core',
+    'academic_data.apps.AcademicDataConfig',
+    'student_portal.apps.StudentPortalConfig',
+    'nosql_utils.apps.NosqlUtilsConfig',
 ]
 
 MIDDLEWARE = [
@@ -76,10 +79,20 @@ WSGI_APPLICATION = 'Trackademic_project.wsgi.application'
 
 DATABASES = {
     'default': {
+        #'ENGINE': 'django.db.backends.postgresql',
+        #'NAME': 'trackademic',
+        #'USER': 'postgres',
+        #'PASSWORD': 'postgres',
+        #'HOST': 'localhost',
+        #'PORT': '5432',
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# MongoDB connection settings
+MONGODB_URI = 'mongodb://localhost:27017/'
+MONGODB_NAME = 'trackademic_nosql'
 
 
 # Password validation
