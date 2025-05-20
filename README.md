@@ -1,1 +1,18 @@
-# milanesa-de-pollo
+# Trackademic - Sistema de Gestión de Notas
+
+## Descripción
+Trackademic es una aplicación web desarrollada en Django que permite a los estudiantes gestionar y hacer seguimiento de sus notas académicas. La aplicación facilita el cálculo de porcentajes, visualización de progreso y gestión de planes de evaluación.
+
+## Equipo 
+- Pablo Guzman
+- Juan Esteban Eraso
+- Juan Camilo Amorocho
+- Stick Martinez
+- Alejandro Quiñonez
+- 
+## Usamos
+- Django 5.0
+- Python 3.11
+- PostgreSQL
+- MongoDB
+
