@@ -16,12 +16,6 @@ Trackademic es una aplicación web desarrollada en Django que permite a los estu
 - PostgreSQL
 - MongoDB
 
-# Entorno Virtual
-
-Para iniciar el entorno virtual del proyecto, ejecuta este codigo:
-
-``` .\Trackademic_project\trackademic_env\Scripts\activate ```
-
 Para instalar las dependencias del proyecto
 
 ``` pip install -r Trackademic_project\requirements.txt ```
