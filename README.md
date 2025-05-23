@@ -9,7 +9,7 @@ Trackademic es una aplicación web desarrollada en Django que permite a los estu
 - Juan Camilo Amorocho
 - Stick Martinez
 - Alejandro Quiñonez
-- 
+
 ## Usamos
 - Django 5.0
 - Python 3.11
