@@ -105,6 +105,7 @@ class Subject(models.Model):
     code = models.CharField(max_length=10, primary_key=True)
     name = models.CharField(max_length=30)
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='subjects')
+    credits = models.PositiveIntegerField(default=3, help_text="Number of academic credits for this subject")
 
     def __str__(self):
         return f"{self.code} - {self.name}"

@@ -79,6 +79,7 @@ WSGI_APPLICATION = 'Trackademic_project.wsgi.application'
 
 DATABASES = {
     'default': {
+        # Esto es para la base de datos de postgre
         #'ENGINE': 'django.db.backends.postgresql',
         #'NAME': 'trackademic',
         #'USER': 'postgres',
