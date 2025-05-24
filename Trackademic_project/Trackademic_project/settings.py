@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
-from mongoengine import connect
+# from mongoengine import connect  # Comentado para desarrollo local
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -80,20 +80,28 @@ WSGI_APPLICATION = 'Trackademic_project.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'trackademic',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
-        'HOST': 'localhost',
-        'PORT': '5432',
-        'OPTIONS': {
-            'client_encoding': 'UTF8',
-        },
-        'TEST': {
-            'NAME': 'test_trackademic',
-        },
-    },
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
+
+# Configuración original de PostgreSQL (comentada para desarrollo local)
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'trackademic',
+#         'USER': 'postgres',
+#         'PASSWORD': 'postgres',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#         'OPTIONS': {
+#             'client_encoding': 'UTF8',
+#         },
+#         'TEST': {
+#             'NAME': 'test_trackademic',
+#         },
+#     },
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -141,8 +149,8 @@ LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
 LOGIN_URL = 'login'
 
-# Conexion con MongoDB
-MONGODB_URI = 'mongodb://localhost:27017/'
-MONGODB_NAME = 'trackademic_nosql'
+# Conexion con MongoDB (comentada para desarrollo local)
+# MONGODB_URI = 'mongodb://localhost:27017/'
+# MONGODB_NAME = 'trackademic_nosql'
 
-connect(db=MONGODB_NAME, host=MONGODB_URI)
+# connect(db=MONGODB_NAME, host=MONGODB_URI)

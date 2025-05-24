@@ -20,5 +20,16 @@ urlpatterns = [
     path('plan/<int:plan_id>/<str:plan_type>/actividad/<int:activity_id>/comentarios/', views.activity_comments, name='activity_comments'),
     path('comentario/<str:comment_id>/responder/', views.reply_to_comment, name='reply_to_comment'),
     path('comentario/<str:comment_id>/like/', views.toggle_comment_like, name='toggle_comment_like'),
+    
+    # APIs y endpoints avanzados
     path('api/progreso/<int:group_id>/', views.api_course_progress, name='api_course_progress'),
+    path('api/estadisticas/exportar/', views.api_export_reports, name='api_export_reports'),
+    path('api/estadisticas/tiempo-real/', views.api_realtime_stats, name='api_realtime_stats'),
+    path('api/predicciones/', views.api_predictions, name='api_predictions'),
+    path('api/alertas/', views.api_alerts, name='api_alerts'),
+    path('api/comparacion/', views.api_comparative_stats, name='api_comparative_stats'),
+    
+    # Dashboard administrativo para profesores
+    path('admin/estadisticas/', views.admin_stats_dashboard, name='admin_stats_dashboard'),
+    path('admin/grupo/<int:group_id>/analytics/', views.admin_group_analytics, name='admin_group_analytics'),
 ] 
