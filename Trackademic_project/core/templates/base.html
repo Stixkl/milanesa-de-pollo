@@ -1,35 +1,308 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trackademic - {% block title %}{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="description" content="Trackademic - Sistema de Gestión Académica Profesional">
+    <meta name="author" content="Trackademic Team">
+    <title>{% block title %}Trackademic{% endblock %} | Sistema de Gestión Académica</title>
+    
+    <!-- Preconnect para optimización -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Fuentes modernas -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5.3 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Nuestro CSS personalizado -->
+    <link rel="stylesheet" href="{% static 'css/trackademic.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    
+    <!-- Estilos adicionales del bloque -->
+    {% block extra_css %}{% endblock %}
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'home' %}">Trackademic</a>
-            <div class="navbar-nav ms-auto">
-                {% if user.is_authenticated %}
-                    <span class="nav-item nav-link text-light">Hola, {{ user.username }}</span>
-                    <form method="post" action="{% url 'logout' %}" class="d-inline">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-link nav-link">Cerrar Sesión</button>
-                    </form>
-                {% else %}
-                    <a class="nav-item nav-link" href="{% url 'login' %}">Iniciar Sesión</a>
-                    <a class="nav-item nav-link" href="{% url 'register' %}">Registrarse</a>
-                {% endif %}
+    <div class="app-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <!-- Marca/Logo -->
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <h3>Trackademic</h3>
             </div>
-        </div>
-    </nav>
+            
+            <!-- Navegación -->
+            <nav class="sidebar-nav">
+                <!-- Sección Principal -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Principal</div>
+                    <div class="nav-item">
+                        <a href="{% url 'home' %}" class="nav-link">
+                            <span class="nav-icon"><i class="fas fa-home"></i></span>
+                            <span class="nav-text">Dashboard</span>
+                        </a>
+                    </div>
+                    {% if user.is_authenticated %}
+                    <div class="nav-item">
+                        <a href="{% url 'student_portal:courses_dashboard' %}" class="nav-link">
+                            <span class="nav-icon"><i class="fas fa-book-open"></i></span>
+                            <span class="nav-text">Mis Cursos</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="{% url 'student_portal:reports_dashboard' %}" class="nav-link">
+                            <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
+                            <span class="nav-text">Estadísticas</span>
+                            <span class="nav-badge">Pro</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Sección Académica -->
+                {% if user.is_authenticated %}
+                <div class="nav-section">
+                    <div class="nav-section-title">Académico</div>
+                    <div class="nav-item">
+                        <a href="{% url 'student_portal:evaluation_plans' %}" class="nav-link">
+                            <span class="nav-icon"><i class="fas fa-tasks"></i></span>
+                            <span class="nav-text">Planes de Evaluación</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="{% url 'student_portal:collaborative_dashboard' %}" class="nav-link">
+                            <span class="nav-icon"><i class="fas fa-users"></i></span>
+                            <span class="nav-text">Colaborativo</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#" class="nav-link" onclick="TrackademicUtils.showNotification('Próximamente disponible', 'info')">
+                            <span class="nav-icon"><i class="fas fa-calendar-alt"></i></span>
+                            <span class="nav-text">Calendario</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Sección Herramientas -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Herramientas</div>
+                    <div class="nav-item">
+                        <a href="#" class="nav-link" onclick="TrackademicUtils.showNotification('Próximamente disponible', 'info')">
+                            <span class="nav-icon"><i class="fas fa-bullseye"></i></span>
+                            <span class="nav-text">Metas Académicas</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#" class="nav-link" onclick="TrackademicUtils.showNotification('Próximamente disponible', 'info')">
+                            <span class="nav-icon"><i class="fas fa-calculator"></i></span>
+                            <span class="nav-text">Calculadora</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="{% url 'student_portal:api_export_reports' %}" class="nav-link">
+                            <span class="nav-icon"><i class="fas fa-file-export"></i></span>
+                            <span class="nav-text">Exportar Datos</span>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Sección Sistema -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Sistema</div>
+                    {% if user.is_authenticated %}
+                    <div class="nav-item">
+                        <a href="#" class="nav-link">
+                            <span class="nav-icon"><i class="fas fa-user-cog"></i></span>
+                            <span class="nav-text">Mi Perfil</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#" class="nav-link">
+                            <span class="nav-icon"><i class="fas fa-cog"></i></span>
+                            <span class="nav-text">Configuración</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="{% url 'logout' %}" class="nav-link">
+                            <span class="nav-icon"><i class="fas fa-sign-out-alt"></i></span>
+                            <span class="nav-text">Cerrar Sesión</span>
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="nav-item">
+                        <a href="{% url 'login' %}" class="nav-link">
+                            <span class="nav-icon"><i class="fas fa-sign-in-alt"></i></span>
+                            <span class="nav-text">Iniciar Sesión</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="{% url 'register' %}" class="nav-link">
+                            <span class="nav-icon"><i class="fas fa-user-plus"></i></span>
+                            <span class="nav-text">Registrarse</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </nav>
+        </aside>
 
-    <div class="container mt-4">
-        {% block content %}
-        {% endblock %}
+        <!-- Contenido Principal -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <button class="sidebar-toggle" data-tooltip="Alternar menú">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    
+                    <nav class="breadcrumb">
+                        {% block breadcrumb %}
+                        <div class="breadcrumb-item">
+                            <i class="fas fa-home"></i>
+                            <span>Inicio</span>
+                        </div>
+                        {% endblock %}
+                    </nav>
+                </div>
+                
+                <div class="header-right">
+                    <!-- Caja de búsqueda -->
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" placeholder="Buscar...">
+                    </div>
+                    
+                    <!-- Acciones del header -->
+                    <div class="header-actions">
+                        <button class="action-btn" data-tooltip="Notificaciones">
+                            <i class="fas fa-bell"></i>
+                            <span class="notification-badge">3</span>
+                        </button>
+                        
+                        <button class="action-btn" data-tooltip="Mensajes">
+                            <i class="fas fa-envelope"></i>
+                        </button>
+                        
+                        <button class="action-btn" data-tooltip="Ayuda">
+                            <i class="fas fa-question-circle"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Menú de usuario -->
+                    {% if user.is_authenticated %}
+                    <div class="user-menu">
+                        <div class="user-avatar">
+                            {{ user.first_name|first|default:user.username|first|upper }}
+                        </div>
+                        <div class="user-info">
+                            <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
+                            <div class="user-role">Estudiante</div>
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    {% endif %}
+                </div>
+            </header>
+
+            <!-- Contenido de la página -->
+            <div class="page-content">
+                {% if messages %}
+                <div class="container-fluid">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% block content %}
+                <!-- El contenido específico de cada página va aquí -->
+                <div class="container-fluid">
+                    <div class="page-header">
+                        <h1 class="page-title text-gradient">Bienvenido a Trackademic</h1>
+                        <p class="page-subtitle">Sistema de gestión académica profesional y moderno</p>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card-modern">
+                                <div class="card-header-modern">
+                                    <h5 class="card-title-modern">
+                                        <i class="fas fa-rocket text-primary me-2"></i>
+                                        Panel de Inicio
+                                    </h5>
+                                </div>
+                                <div class="card-body-modern">
+                                    <p>Esta es la página de inicio del sistema Trackademic. Un sistema moderno y profesional para la gestión académica.</p>
+                                    {% if not user.is_authenticated %}
+                                    <div class="d-flex gap-3 mt-3">
+                                        <a href="{% url 'login' %}" class="btn-modern btn-primary-modern">
+                                            <i class="fas fa-sign-in-alt"></i>
+                                            Iniciar Sesión
+                                        </a>
+                                        <a href="{% url 'register' %}" class="btn-modern btn-secondary-modern">
+                                            <i class="fas fa-user-plus"></i>
+                                            Registrarse
+                                        </a>
+                                    </div>
+                                    {% else %}
+                                    <div class="d-flex gap-3 mt-3">
+                                        <a href="{% url 'student_portal:courses_dashboard' %}" class="btn-modern btn-primary-modern">
+                                            <i class="fas fa-book-open"></i>
+                                            Ver Mis Cursos
+                                        </a>
+                                        <a href="{% url 'student_portal:reports_dashboard' %}" class="btn-modern btn-success-modern">
+                                            <i class="fas fa-chart-line"></i>
+                                            Ver Estadísticas
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endblock %}
+            </div>
+        </main>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Scripts -->
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Nuestro JavaScript personalizado -->
+    <script src="{% static 'js/trackademic.js' %}"></script>
+    
+    <!-- Scripts adicionales del bloque -->
+    {% block extra_js %}{% endblock %}
+    
+    <!-- Scripts en línea del bloque -->
+    {% block inline_js %}{% endblock %}
+    
+    <!-- PWA Support (Opcional) -->
+    <script>
+        // Registro del Service Worker para PWA (futuro)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .catch(err => console.log('SW registration failed'));
+        }
+    </script>
 </body>
 </html>

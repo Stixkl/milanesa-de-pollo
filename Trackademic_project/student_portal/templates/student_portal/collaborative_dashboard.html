@@ -1,0 +1,525 @@
+{% extends 'base.html' %}
+{% load math_filters %}
+
+{% block title %}Dashboard Colaborativo{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb-item">
+    <i class="fas fa-home"></i>
+    <span>Inicio</span>
+</div>
+<div class="breadcrumb-item">
+    <i class="fas fa-users"></i>
+    <span>Dashboard Colaborativo</span>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.collaboration-card {
+    background: white;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-200);
+    transition: var(--transition);
+    overflow: hidden;
+    position: relative;
+}
+
+.collaboration-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--secondary-color), #10b981);
+}
+
+.collaboration-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.activity-metric {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    text-align: center;
+    border: 1px solid #bfdbfe;
+    transition: var(--transition);
+}
+
+.activity-metric:hover {
+    transform: scale(1.02);
+    box-shadow: var(--shadow);
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.metric-label {
+    color: var(--gray-600);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.popular-plan-item {
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--gray-200);
+    transition: var(--transition);
+    background: white;
+    margin-bottom: 0.75rem;
+}
+
+.popular-plan-item:hover {
+    border-color: var(--primary-light);
+    background: var(--gray-50);
+    transform: translateX(4px);
+}
+
+.plan-popularity {
+    background: linear-gradient(135deg, var(--accent-color), #f59e0b);
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-weight: 600;
+}
+
+.comment-item {
+    padding: 1rem;
+    border-left: 3px solid var(--primary-light);
+    background: var(--gray-50);
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    margin-bottom: 0.75rem;
+    transition: var(--transition);
+}
+
+.comment-item:hover {
+    background: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.comment-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+
+.comment-content {
+    color: var(--gray-700);
+    line-height: 1.5;
+    font-size: 0.875rem;
+}
+
+.collaboration-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.engagement-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.engagement-high {
+    background: var(--success-color);
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+}
+
+.engagement-medium {
+    background: var(--warning-color);
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+}
+
+.engagement-low {
+    background: var(--danger-color);
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.3);
+}
+
+.floating-action {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: linear-gradient(135deg, var(--secondary-color), #10b981);
+    color: white;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    transition: var(--transition);
+    z-index: 100;
+}
+
+.floating-action:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-xl);
+}
+
+@media (max-width: 768px) {
+    .collaboration-stats {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    
+    .floating-action {
+        bottom: 1rem;
+        right: 1rem;
+        width: 48px;
+        height: 48px;
+        font-size: 1rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header del Dashboard Colaborativo -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="fas fa-users text-secondary me-3"></i>
+            Dashboard Colaborativo
+        </h1>
+        <p class="page-subtitle">Conecta, colabora y aprende junto a otros estudiantes</p>
+    </div>
+
+    <!-- Métricas de Actividad Colaborativa -->
+    <div class="collaboration-stats">
+        <div class="activity-metric">
+            <div class="metric-value">{{ activity_summary.total_comments|default:0 }}</div>
+            <div class="metric-label">
+                <i class="fas fa-comments me-1"></i>
+                Comentarios Realizados
+            </div>
+        </div>
+        
+        <div class="activity-metric">
+            <div class="metric-value">{{ activity_summary.plans_created|default:0 }}</div>
+            <div class="metric-label">
+                <i class="fas fa-lightbulb me-1"></i>
+                Planes Creados
+            </div>
+        </div>
+        
+        <div class="activity-metric">
+            <div class="metric-value">{{ activity_summary.dashboard_visits|default:0 }}</div>
+            <div class="metric-label">
+                <i class="fas fa-eye me-1"></i>
+                Visitas al Dashboard
+            </div>
+        </div>
+        
+        <div class="activity-metric">
+            <div class="metric-value">
+                {% if activity_summary.total_activities %}
+                    {% if activity_summary.total_activities >= 20 %}Alto
+                    {% elif activity_summary.total_activities >= 10 %}Medio
+                    {% else %}Bajo
+                    {% endif %}
+                {% else %}Bajo{% endif %}
+            </div>
+            <div class="metric-label">
+                <span class="engagement-indicator 
+                    {% if activity_summary.total_activities >= 20 %}engagement-high
+                    {% elif activity_summary.total_activities >= 10 %}engagement-medium
+                    {% else %}engagement-low
+                    {% endif %}"></span>
+                Nivel de Participación
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Planes Oficiales Populares -->
+        <div class="col-md-4 mb-4">
+            <div class="collaboration-card">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="fas fa-fire text-danger me-2"></i>
+                        Planes Oficiales Populares
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    {% if popular_official_plans %}
+                        {% for plan in popular_official_plans %}
+                        <div class="popular-plan-item">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="mb-1 fw-bold">{{ plan.subject_name }}</h6>
+                                <span class="plan-popularity">
+                                    <i class="fas fa-users me-1"></i>
+                                    {{ plan.usage_count }}
+                                </span>
+                            </div>
+                            <p class="small text-muted mb-2">{{ plan.subject_code }}</p>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <small class="text-success">
+                                    <i class="fas fa-thumbs-up me-1"></i>
+                                    {{ plan.engagement_score|floatformat:0 }}% engagement
+                                </small>
+                                <a href="#" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i> Ver
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-search fa-2x text-muted mb-3"></i>
+                            <p class="text-muted">No hay planes populares disponibles</p>
+                            <a href="{% url 'student_portal:evaluation_plans' %}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus"></i> Explorar Planes
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Planes Personalizados Populares -->
+        <div class="col-md-4 mb-4">
+            <div class="collaboration-card">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="fas fa-star text-warning me-2"></i>
+                        Planes Personalizados Populares
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    {% if popular_custom_plans %}
+                        {% for plan in popular_custom_plans %}
+                        <div class="popular-plan-item">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="mb-1 fw-bold">{{ plan.subject_name }}</h6>
+                                <span class="plan-popularity">
+                                    <i class="fas fa-heart me-1"></i>
+                                    {{ plan.usage_count }}
+                                </span>
+                            </div>
+                            <p class="small text-muted mb-2">Plan personalizado</p>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <small class="text-info">
+                                    <i class="fas fa-magic me-1"></i>
+                                    Personalizado
+                                </small>
+                                <a href="#" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-copy"></i> Usar
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-magic fa-2x text-muted mb-3"></i>
+                            <p class="text-muted">No hay planes personalizados populares</p>
+                            <a href="{% url 'student_portal:courses_dashboard' %}" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-plus"></i> Crear Plan
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Actividad Reciente -->
+        <div class="col-md-4 mb-4">
+            <div class="collaboration-card">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="fas fa-clock text-info me-2"></i>
+                        Mis Comentarios Recientes
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    {% if recent_comments %}
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            {% for comment in recent_comments %}
+                            <div class="comment-item">
+                                <div class="comment-meta">
+                                    <i class="fas fa-comment-dots"></i>
+                                    <span>{{ comment.comment_type|title }}</span>
+                                    <span class="ms-auto">
+                                        {{ comment.created_at|date:"d M" }}
+                                    </span>
+                                </div>
+                                <div class="comment-content">
+                                    {{ comment.content|truncatewords:15 }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <a href="#" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-history"></i> Ver Todos
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-comment-slash fa-2x text-muted mb-3"></i>
+                            <p class="text-muted">No has hecho comentarios aún</p>
+                            <p class="small text-muted">¡Empieza a colaborar con otros estudiantes!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Colaboración y Comunidad -->
+    <div class="row">
+        <div class="col-12">
+            <div class="collaboration-card">
+                <div class="card-header-modern">
+                    <h5 class="card-title-modern">
+                        <i class="fas fa-handshake text-primary me-2"></i>
+                        Centro de Colaboración
+                    </h5>
+                </div>
+                <div class="card-body-modern">
+                    <div class="row">
+                        <div class="col-md-3 text-center mb-3">
+                            <div class="collaboration-feature p-4 rounded border h-100">
+                                <i class="fas fa-comments fa-3x text-primary mb-3"></i>
+                                <h6>Foros de Discusión</h6>
+                                <p class="text-muted small">Participa en discusiones académicas</p>
+                                <button class="btn btn-primary btn-sm" onclick="TrackademicUtils.showNotification('Próximamente disponible', 'info')">
+                                    <i class="fas fa-arrow-right"></i> Acceder
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3 text-center mb-3">
+                            <div class="collaboration-feature p-4 rounded border h-100">
+                                <i class="fas fa-users fa-3x text-success mb-3"></i>
+                                <h6>Grupos de Estudio</h6>
+                                <p class="text-muted small">Forma o únete a grupos</p>
+                                <button class="btn btn-success btn-sm" onclick="TrackademicUtils.showNotification('Próximamente disponible', 'info')">
+                                    <i class="fas fa-arrow-right"></i> Explorar
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3 text-center mb-3">
+                            <div class="collaboration-feature p-4 rounded border h-100">
+                                <i class="fas fa-share-alt fa-3x text-warning mb-3"></i>
+                                <h6>Compartir Recursos</h6>
+                                <p class="text-muted small">Comparte y recibe material</p>
+                                <button class="btn btn-warning btn-sm" onclick="TrackademicUtils.showNotification('Próximamente disponible', 'info')">
+                                    <i class="fas fa-arrow-right"></i> Compartir
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3 text-center mb-3">
+                            <div class="collaboration-feature p-4 rounded border h-100">
+                                <i class="fas fa-question-circle fa-3x text-info mb-3"></i>
+                                <h6>Q&A Académico</h6>
+                                <p class="text-muted small">Resuelve dudas colaborativamente</p>
+                                <button class="btn btn-info btn-sm" onclick="TrackademicUtils.showNotification('Próximamente disponible', 'info')">
+                                    <i class="fas fa-arrow-right"></i> Preguntar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tips de Colaboración -->
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h6 class="mb-3">
+                            <i class="fas fa-lightbulb text-warning me-2"></i>
+                            Tips para Colaborar Efectivamente
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled small">
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        Sé respetuoso y constructivo en tus comentarios
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        Comparte tus estrategias de estudio exitosas
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled small">
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        Ayuda a otros estudiantes cuando puedas
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        Mantén un ambiente positivo de aprendizaje
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Botón de Acción Flotante -->
+<button class="floating-action" onclick="TrackademicUtils.showNotification('¡Funcionalidad próximamente!', 'info')" data-tooltip="Crear Nuevo Comentario">
+    <i class="fas fa-plus"></i>
+</button>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animación de entrada para las métricas
+    const metrics = document.querySelectorAll('.activity-metric');
+    metrics.forEach((metric, index) => {
+        setTimeout(() => {
+            metric.style.opacity = '0';
+            metric.style.transform = 'translateY(20px)';
+            metric.style.transition = 'all 0.6s ease-out';
+            
+            requestAnimationFrame(() => {
+                metric.style.opacity = '1';
+                metric.style.transform = 'translateY(0)';
+            });
+        }, index * 100);
+    });
+
+    // Animación de hover mejorada para planes
+    const planItems = document.querySelectorAll('.popular-plan-item');
+    planItems.forEach(item => {
+        item.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateX(8px) scale(1.02)';
+        });
+        
+        item.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateX(0) scale(1)';
+        });
+    });
+
+    // Efecto de scroll suave para comentarios
+    const commentsContainer = document.querySelector('.comment-item').parentElement;
+    if (commentsContainer) {
+        commentsContainer.style.scrollBehavior = 'smooth';
+    }
+});
+</script>
+{% endblock %} 
