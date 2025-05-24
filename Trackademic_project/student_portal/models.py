@@ -204,7 +204,7 @@ class GradeEstimation(models.Model):
         
         for grade in current_grades:
             percentage = grade.activity.percentage
-            current_grade += (grade.grade * Decimal(percentage / 100))
+            current_grade += (grade.grade * Decimal(percentage) / Decimal('100'))
             evaluated_percentage += percentage
         
         # Porcentaje restante por evaluar
@@ -220,7 +220,7 @@ class GradeEstimation(models.Model):
         
         # Calcular nota necesaria en porcentaje restante
         target = self.target_grade
-        needed_grade = (target - current_grade) * (100 / remaining_percentage)
+        needed_grade = (target - current_grade) * (Decimal('100') / Decimal(remaining_percentage))
         
         # Verificar si es posible alcanzar la nota objetivo
         if needed_grade > 5:

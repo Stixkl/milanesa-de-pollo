@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}Mis Cursos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-graduation-cap"></i> Mis Cursos</h2>
+            <div>
+                <a href="{% url 'student_portal:evaluation_plans' %}" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-clipboard-list"></i> Planes de Evaluación
+                </a>
+                <a href="{% url 'student_portal:reports_dashboard' %}" class="btn btn-outline-info">
+                    <i class="fas fa-chart-bar"></i> Informes
+                </a>
+            </div>
+        </div>
+
+        <!-- Estadísticas Generales -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4>{{ total_courses }}</h4>
+                                <span>Cursos Inscritos</span>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-book fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4>{{ completed_activities }}</h4>
+                                <span>Actividades Calificadas</span>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-check-circle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4>{% if semester_summary %}{{ semester_summary.average_grade|floatformat:2 }}{% else %}0.00{% endif %}</h4>
+                                <span>Promedio Semestre</span>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-trophy fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4>{% if semester_summary %}{{ semester_summary.credits_earned }}{% else %}0{% endif %}</h4>
+                                <span>Créditos Ganados</span>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-medal fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información del Semestre Activo -->
+        {% if active_semester %}
+        <div class="alert alert-info mb-4">
+            <h5><i class="fas fa-calendar-alt"></i> Semestre Activo: {{ active_semester.name }}</h5>
+            <p class="mb-0">Período: {{ active_semester.start_date }} - {{ active_semester.end_date }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Lista de Cursos -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-list"></i> Cursos del Semestre</h5>
+            </div>
+            <div class="card-body">
+                {% if enrollments %}
+                    <div class="row">
+                        {% for enrollment in enrollments %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">{{ enrollment.group.subject.code }}</h6>
+                                    <small class="text-muted">Grupo {{ enrollment.group.number }}</small>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ enrollment.group.subject.name }}</h6>
+                                    <p class="card-text">
+                                        <strong>Profesor:</strong> {{ enrollment.group.professor.first_name }} {{ enrollment.group.professor.last_name }}<br>
+                                        <strong>Créditos:</strong> {{ enrollment.group.subject.credits }}<br>
+                                        <strong>Nota Actual:</strong> 
+                                        <span class="badge {% if enrollment.current_grade >= 3.0 %}bg-success{% elif enrollment.current_grade >= 2.5 %}bg-warning{% else %}bg-danger{% endif %}">
+                                            {{ enrollment.current_grade|floatformat:2 }}
+                                        </span>
+                                    </p>
+                                </div>
+                                <div class="card-footer bg-transparent">
+                                    <div class="btn-group w-100" role="group">
+                                        <a href="{% url 'student_portal:course_detail' enrollment.group.id %}" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-eye"></i> Ver Detalles
+                                        </a>
+                                        <a href="{% url 'student_portal:manage_grades' enrollment.group.id %}" class="btn btn-outline-secondary btn-sm">
+                                            <i class="fas fa-edit"></i> Gestionar Notas
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-graduation-cap fa-3x text-muted mb-3"></i>
+                        <h5>No hay cursos inscritos</h5>
+                        <p class="text-muted">Parece que no tienes cursos inscritos para este semestre.</p>
+                        <a href="{% url 'student_portal:evaluation_plans' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Explorar Planes de Evaluación
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Acciones Rápidas -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-bolt"></i> Acciones Rápidas</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <a href="{% url 'student_portal:evaluation_plans' %}" class="btn btn-outline-primary w-100 mb-2">
+                                    <i class="fas fa-clipboard-list"></i><br>
+                                    Gestionar Planes
+                                </a>
+                            </div>
+                            <div class="col-md-3">
+                                <a href="{% url 'student_portal:reports_dashboard' %}" class="btn btn-outline-success w-100 mb-2">
+                                    <i class="fas fa-chart-line"></i><br>
+                                    Ver Informes
+                                </a>
+                            </div>
+                            <div class="col-md-3">
+                                {% if active_semester %}
+                                <a href="{% url 'student_portal:semester_summary' active_semester.id %}" class="btn btn-outline-info w-100 mb-2">
+                                    <i class="fas fa-file-alt"></i><br>
+                                    Resumen Semestre
+                                </a>
+                                {% else %}
+                                <button class="btn btn-outline-secondary w-100 mb-2" disabled>
+                                    <i class="fas fa-file-alt"></i><br>
+                                    Sin Semestre Activo
+                                </button>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <a href="{% url 'home' %}" class="btn btn-outline-dark w-100 mb-2">
+                                    <i class="fas fa-home"></i><br>
+                                    Volver al Inicio
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FontAwesome para iconos -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<style>
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.bg-primary { background-color: #007bff !important; }
+.bg-success { background-color: #28a745 !important; }
+.bg-warning { background-color: #ffc107 !important; }
+.bg-info { background-color: #17a2b8 !important; }
+</style>
+{% endblock %} 

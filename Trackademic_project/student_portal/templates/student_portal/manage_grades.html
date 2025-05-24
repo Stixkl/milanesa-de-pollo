@@ -1,0 +1,307 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestionar Notas - {{ group.subject.name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <!-- Encabezado -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="fas fa-edit"></i> Gestionar Notas</h2>
+                <p class="text-muted mb-0">{{ group.subject.code }} - {{ group.subject.name }} (Grupo {{ group.number }})</p>
+            </div>
+            <div>
+                <a href="{% url 'student_portal:course_detail' group.id %}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left"></i> Volver al Curso
+                </a>
+                <a href="{% url 'student_portal:courses_dashboard' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-list"></i> Todos los Cursos
+                </a>
+            </div>
+        </div>
+
+        <!-- Resumen del Plan -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-clipboard-list"></i> Plan de Evaluación Activo
+                    {% if plan_type == 'official' %}
+                        <span class="badge bg-success">Oficial</span>
+                    {% else %}
+                        <span class="badge bg-info">Personalizado</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if active_plan %}
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p><strong>Plan:</strong> {{ active_plan.group.subject.name }}</p>
+                            <p><strong>Total de Actividades:</strong> {{ activities.count }}</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <h4>Nota Actual: 
+                                <span class="{% if enrollment.current_grade >= 3.0 %}text-success{% elif enrollment.current_grade >= 2.5 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ enrollment.current_grade|floatformat:2 }}
+                                </span>
+                            </h4>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Formulario de Notas -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-plus-circle"></i> Agregar/Editar Calificaciones</h5>
+            </div>
+            <div class="card-body">
+                {% if activities %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Actividad</th>
+                                    <th>Porcentaje</th>
+                                    <th>Fecha Límite</th>
+                                    <th>Calificación Actual</th>
+                                    <th>Nueva Calificación</th>
+                                    <th>Notas</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for activity in activities %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ activity.name }}</strong>
+                                        {% if activity.description %}
+                                            <br><small class="text-muted">{{ activity.description }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ activity.percentage }}%</span>
+                                    </td>
+                                    <td>
+                                        {% if activity.due_date %}
+                                            {{ activity.due_date|date:"d/m/Y" }}
+                                        {% else %}
+                                            <span class="text-muted">Sin fecha</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if activity.id in grade_dict %}
+                                            {% with grade=grade_dict.activity.id %}
+                                                <strong class="{% if grade.grade >= 3.0 %}text-success{% elif grade.grade >= 2.5 %}text-warning{% else %}text-danger{% endif %}">
+                                                    {{ grade.grade|floatformat:2 }}
+                                                </strong>
+                                                {% if grade.notes %}
+                                                    <br><small class="text-muted">{{ grade.notes|truncatechars:30 }}</small>
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% else %}
+                                            <span class="text-muted">Sin calificar</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <form method="post" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="activity_id" value="{{ activity.id }}">
+                                            <input type="number" name="grade" class="form-control" 
+                                                   min="0" max="5" step="0.1" 
+                                                   value="{% if activity.id in grade_dict %}{{ grade_dict.activity.id.grade|floatformat:1 }}{% endif %}"
+                                                   placeholder="0.0 - 5.0" style="width: 100px;">
+                                    </td>
+                                    <td>
+                                            <textarea name="notes" class="form-control" rows="2" 
+                                                      placeholder="Notas opcionales...">{% if activity.id in grade_dict %}{{ grade_dict.activity.id.notes }}{% endif %}</textarea>
+                                    </td>
+                                    <td>
+                                            <button type="submit" class="btn btn-success btn-sm mb-1">
+                                                <i class="fas fa-save"></i> 
+                                                {% if activity.id in grade_dict %}Actualizar{% else %}Agregar{% endif %}
+                                            </button>
+                                        </form>
+                                        {% if activity.id in grade_dict %}
+                                            <form method="post" action="{% url 'student_portal:delete_grade' grade_dict.activity.id.id plan_type %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger btn-sm" 
+                                                        onclick="return confirm('¿Estás seguro de que quieres eliminar esta calificación?')">
+                                                    <i class="fas fa-trash"></i> Eliminar
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Resumen de Calificaciones -->
+                    <div class="mt-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6>Resumen de Calificaciones</h6>
+                                        <div class="row text-center">
+                                            <div class="col-4">
+                                                <small class="text-muted">Calificadas</small>
+                                                <h5 class="text-success">{{ grade_dict|length }}</h5>
+                                            </div>
+                                            <div class="col-4">
+                                                <small class="text-muted">Pendientes</small>
+                                                <h5 class="text-warning" id="pending-count" 
+                                                   data-total="{{ activities.count }}" 
+                                                   data-graded="{{ grade_dict|length }}">--</h5>
+                                            </div>
+                                            <div class="col-4">
+                                                <small class="text-muted">Total</small>
+                                                <h5 class="text-info">{{ activities.count }}</h5>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6>Progreso del Curso</h6>
+                                            <div class="progress mb-2">
+                                                <div class="progress-bar bg-success" role="progressbar" id="course-progress">
+                                                    {{ progress_percentage|floatformat:0 }}%
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">{{ progress_percentage|floatformat:0 }}% del curso calificado</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-exclamation-circle fa-3x text-muted mb-3"></i>
+                        <h5>No hay actividades en el plan de evaluación</h5>
+                        <p class="text-muted">No se pueden gestionar calificaciones sin un plan de evaluación definido.</p>
+                        <a href="{% url 'student_portal:course_detail' group.id %}" class="btn btn-primary">
+                            <i class="fas fa-arrow-left"></i> Volver al Curso
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Instrucciones de Uso -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Instrucciones</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Agregar Calificaciones:</h6>
+                        <ul class="small">
+                            <li>Ingresa una nota entre 0.0 y 5.0</li>
+                            <li>Agrega notas opcionales para recordar detalles</li>
+                            <li>Haz clic en "Agregar" para guardar</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Gestionar Calificaciones:</h6>
+                        <ul class="small">
+                            <li>Modifica el valor y haz clic en "Actualizar"</li>
+                            <li>Usa "Eliminar" para quitar una calificación</li>
+                            <li>La nota del curso se actualiza automáticamente</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FontAwesome para iconos -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<style>
+.table-responsive {
+    border-radius: 0.375rem;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.progress {
+    height: 20px;
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0,123,255,.075);
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.text-success { color: #28a745 !important; }
+.text-warning { color: #ffc107 !important; }
+.text-danger { color: #dc3545 !important; }
+
+#course-progress {
+    width: p;
+}
+</style>
+
+<!-- JavaScript para mejorar la experiencia -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit forms when Enter is pressed in grade inputs
+    const gradeInputs = document.querySelectorAll('input[name="grade"]');
+    gradeInputs.forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.closest('form').submit();
+            }
+        });
+    });
+    
+    // Validate grade inputs
+    gradeInputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            const value = parseFloat(this.value);
+            if (value < 0 || value > 5) {
+                this.setCustomValidity('La nota debe estar entre 0.0 y 5.0');
+                this.reportValidity();
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    });
+    
+    // Calculate pending activities
+    const pendingElement = document.getElementById('pending-count');
+    if (pendingElement) {
+        const totalActivities = parseInt(pendingElement.dataset.total);
+        const gradedActivities = parseInt(pendingElement.dataset.graded);
+        const pendingCount = totalActivities - gradedActivities;
+        pendingElement.textContent = pendingCount;
+    }
+});
+</script>
+{% endblock %} 

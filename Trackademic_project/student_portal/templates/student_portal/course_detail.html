@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ group.subject.name }} - Detalle{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <!-- Encabezado del Curso -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="fas fa-book"></i> {{ group.subject.name }}</h2>
+                <p class="text-muted mb-0">{{ group.subject.code }} - Grupo {{ group.group.number }}</p>
+            </div>
+            <div>
+                <a href="{% url 'student_portal:courses_dashboard' %}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </a>
+                <a href="{% url 'student_portal:manage_grades' group.id %}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Gestionar Notas
+                </a>
+            </div>
+        </div>
+
+        <!-- Información General del Curso -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Información del Curso</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Código:</strong> {{ group.subject.code }}</p>
+                                <p><strong>Nombre:</strong> {{ group.subject.name }}</p>
+                                <p><strong>Grupo:</strong> {{ group.number }}</p>
+                                <p><strong>Créditos:</strong> {{ group.subject.credits }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Profesor:</strong> {{ group.professor.first_name }} {{ group.professor.last_name }}</p>
+                                <p><strong>Email:</strong> {{ group.professor.email }}</p>
+                                <p><strong>Semestre:</strong> {{ group.semester }}</p>
+                                <p><strong>Fecha de Inscripción:</strong> {{ enrollment.enrollment_date|date:"d/m/Y" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-gradient">
+                    <div class="card-body text-center">
+                        <h3 class="card-title">Nota Actual</h3>
+                        <h1 class="display-4 {% if current_grade >= 3.0 %}text-success{% elif current_grade >= 2.5 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ current_grade|floatformat:2 }}
+                        </h1>
+                        <p class="card-text">
+                            {% if current_grade >= 3.0 %}
+                                <span class="badge bg-success">Aprobando</span>
+                            {% elif current_grade >= 2.5 %}
+                                <span class="badge bg-warning">En Riesgo</span>
+                            {% else %}
+                                <span class="badge bg-danger">Reprobando</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Plan de Evaluación -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-clipboard-list"></i> Plan de Evaluación
+                    {% if plan_type == 'official' %}
+                        <span class="badge bg-success">Oficial</span>
+                    {% elif plan_type == 'custom' %}
+                        <span class="badge bg-info">Personalizado</span>
+                    {% else %}
+                        <span class="badge bg-warning">Sin Plan</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if active_plan %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Actividad</th>
+                                    <th>Descripción</th>
+                                    <th>Porcentaje</th>
+                                    <th>Fecha Límite</th>
+                                    <th>Calificación</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for activity in activities %}
+                                <tr>
+                                    <td><strong>{{ activity.name }}</strong></td>
+                                    <td>{{ activity.description|default:"Sin descripción" }}</td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ activity.percentage }}%</span>
+                                    </td>
+                                    <td>
+                                        {% if activity.due_date %}
+                                            {{ activity.due_date|date:"d/m/Y" }}
+                                        {% else %}
+                                            <span class="text-muted">Sin fecha</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if activity.id in grade_dict %}
+                                            <strong class="{% if grade_dict.activity.id.grade >= 3.0 %}text-success{% elif grade_dict.activity.id.grade >= 2.5 %}text-warning{% else %}text-danger{% endif %}">
+                                                {{ grade_dict.activity.id.grade|floatformat:2 }}
+                                            </strong>
+                                        {% else %}
+                                            <span class="text-muted">Sin calificar</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if activity.id in grade_dict %}
+                                            <span class="badge bg-success">Calificada</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Pendiente</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-clipboard fa-3x text-muted mb-3"></i>
+                        <h5>No hay plan de evaluación definido</h5>
+                        <p class="text-muted">Puedes crear un plan personalizado para este curso.</p>
+                        <a href="{% url 'student_portal:create_custom_plan' group.id %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Crear Plan Personalizado
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Meta Académica -->
+        {% if official_plan %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-target"></i> Meta Académica</h5>
+            </div>
+            <div class="card-body">
+                {% if estimation %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Meta Actual: <span class="text-primary">{{ estimation.target_grade|floatformat:2 }}</span></h6>
+                            <form method="post" action="{% url 'student_portal:set_grade_goal' official_plan.id %}" class="mt-3">
+                                {% csrf_token %}
+                                <div class="input-group">
+                                    <input type="number" name="target_grade" class="form-control" 
+                                           min="0" max="5" step="0.1" 
+                                           value="{{ estimation.target_grade|floatformat:1 }}" 
+                                           placeholder="Nueva meta">
+                                    <button type="submit" class="btn btn-outline-primary">
+                                        <i class="fas fa-save"></i> Actualizar Meta
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-md-6">
+                            {% with result=estimation.get_required_grades %}
+                                {% if result.is_possible %}
+                                    <div class="alert alert-success">
+                                        <strong>¡Meta alcanzable!</strong><br>
+                                        {{ result.message }}
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-danger">
+                                        <strong>Meta muy alta</strong><br>
+                                        {{ result.message }}
+                                    </div>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                    </div>
+                {% else %}
+                    <p>Establece una meta académica para este curso:</p>
+                    <form method="post" action="{% url 'student_portal:set_grade_goal' official_plan.id %}">
+                        {% csrf_token %}
+                        <div class="input-group">
+                            <input type="number" name="target_grade" class="form-control" 
+                                   min="0" max="5" step="0.1" 
+                                   placeholder="Meta deseada (0.0 - 5.0)">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-bullseye"></i> Establecer Meta
+                            </button>
+                        </div>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Acciones -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-cogs"></i> Acciones</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <a href="{% url 'student_portal:manage_grades' group.id %}" class="btn btn-primary w-100 mb-2">
+                            <i class="fas fa-edit"></i><br>
+                            Gestionar Notas
+                        </a>
+                    </div>
+                    {% if not active_plan %}
+                    <div class="col-md-3">
+                        <a href="{% url 'student_portal:create_custom_plan' group.id %}" class="btn btn-success w-100 mb-2">
+                            <i class="fas fa-plus"></i><br>
+                            Crear Plan
+                        </a>
+                    </div>
+                    {% endif %}
+                    {% if custom_plan %}
+                    <div class="col-md-3">
+                        <a href="{% url 'student_portal:edit_custom_plan' custom_plan.id %}" class="btn btn-warning w-100 mb-2">
+                            <i class="fas fa-edit"></i><br>
+                            Editar Plan
+                        </a>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-3">
+                        <a href="{% url 'student_portal:courses_dashboard' %}" class="btn btn-outline-secondary w-100 mb-2">
+                            <i class="fas fa-list"></i><br>
+                            Ver Todos los Cursos
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FontAwesome para iconos -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<style>
+.bg-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0,123,255,.075);
+}
+
+.badge {
+    font-size: 0.75em;
+}
+</style>
+{% endblock %} 

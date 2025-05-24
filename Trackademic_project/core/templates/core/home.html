@@ -16,7 +16,7 @@
                                 <div class="card-body">
                                     <h6 class="card-subtitle mb-2 text-muted">Mis Cursos</h6>
                                     <p class="card-text">Administra tus cursos y calificaciones.</p>
-                                    <a href="#" class="btn btn-primary">Ver Cursos</a>
+                                    <a href="{% url 'student_portal:courses_dashboard' %}" class="btn btn-primary">Ver Cursos</a>
                                 </div>
                             </div>
                         </div>
@@ -25,7 +25,7 @@
                                 <div class="card-body">
                                     <h6 class="card-subtitle mb-2 text-muted">Plan de Evaluación</h6>
                                     <p class="card-text">Gestiona los planes de evaluación.</p>
-                                    <a href="#" class="btn btn-primary">Ver Planes</a>
+                                    <a href="{% url 'student_portal:evaluation_plans' %}" class="btn btn-primary">Ver Planes</a>
                                 </div>
                             </div>
                         </div>
@@ -34,7 +34,7 @@
                                 <div class="card-body">
                                     <h6 class="card-subtitle mb-2 text-muted">Estadísticas</h6>
                                     <p class="card-text">Visualiza tu progreso académico.</p>
-                                    <a href="#" class="btn btn-primary">Ver Estadísticas</a>
+                                    <a href="{% url 'student_portal:reports_dashboard' %}" class="btn btn-primary">Ver Estadísticas</a>
                                 </div>
                             </div>
                         </div>

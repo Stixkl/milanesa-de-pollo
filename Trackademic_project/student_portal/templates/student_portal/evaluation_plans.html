@@ -1,0 +1,317 @@
+{% extends 'base.html' %}
+
+{% block title %}Planes de Evaluación{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <!-- Encabezado -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="fas fa-clipboard-list"></i> Planes de Evaluación</h2>
+                <p class="text-muted mb-0">Gestiona y colabora en planes de evaluación</p>
+            </div>
+            <div>
+                <a href="{% url 'student_portal:collaborative_dashboard' %}" class="btn btn-outline-success me-2">
+                    <i class="fas fa-users"></i> Dashboard Colaborativo
+                </a>
+                <a href="{% url 'student_portal:courses_dashboard' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i> Volver a Cursos
+                </a>
+            </div>
+        </div>
+
+        <!-- Información del Semestre -->
+        {% if active_semester %}
+        <div class="alert alert-info mb-4">
+            <h5><i class="fas fa-calendar-alt"></i> Semestre Activo: {{ active_semester.name }}</h5>
+            <p class="mb-0">Explorando planes de evaluación disponibles para este período académico</p>
+        </div>
+        {% endif %}
+
+        <!-- Planes Oficiales -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-university"></i> Planes de Evaluación Oficiales
+                    <span class="badge bg-success">{{ official_plans.count }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if official_plans %}
+                    <div class="row">
+                        {% for plan in official_plans %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 border-success">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">{{ plan.group.subject.code }}</h6>
+                                    <small class="text-muted">Grupo {{ plan.group.number }}</small>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ plan.group.subject.name }}</h6>
+                                    <p class="card-text">
+                                        <strong>Profesor:</strong> {{ plan.group.professor.first_name }} {{ plan.group.professor.last_name }}<br>
+                                        <strong>Actividades:</strong> {{ plan.activities.count }}<br>
+                                        <strong>Estado:</strong> 
+                                        {% if plan.validate_total_percentage %}
+                                            <span class="badge bg-success">Válido (100%)</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Incompleto</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="card-footer bg-transparent">
+                                    <div class="btn-group w-100" role="group">
+                                        <a href="{% url 'student_portal:plan_comments' plan.id 'official' %}" 
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-comments"></i> Comentarios
+                                        </a>
+                                        <a href="{% url 'student_portal:course_detail' plan.group.id %}" 
+                                           class="btn btn-primary btn-sm">
+                                            <i class="fas fa-eye"></i> Ver Curso
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-university fa-3x text-muted mb-3"></i>
+                        <h5>No hay planes oficiales disponibles</h5>
+                        <p class="text-muted">Los profesores aún no han publicado planes de evaluación oficiales.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Mis Planes Personalizados -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-edit"></i> Mis Planes Personalizados
+                    <span class="badge bg-info">{{ custom_plans.count }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if custom_plans %}
+                    <div class="row">
+                        {% for plan in custom_plans %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 border-info">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">{{ plan.name }}</h6>
+                                    <small class="text-muted">{{ plan.group.subject.code }} - Grupo {{ plan.group.number }}</small>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ plan.group.subject.name }}</h6>
+                                    <p class="card-text">
+                                        <strong>Actividades:</strong> {{ plan.activities.count }}<br>
+                                        <strong>Visibilidad:</strong> 
+                                        {% if plan.is_public %}
+                                            <span class="badge bg-success">Público</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Privado</span>
+                                        {% endif %}<br>
+                                        <strong>Estado:</strong> 
+                                        {% if plan.validate_total_percentage %}
+                                            <span class="badge bg-success">Válido (100%)</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Incompleto</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="card-footer bg-transparent">
+                                    <div class="btn-group w-100" role="group">
+                                        <a href="{% url 'student_portal:edit_custom_plan' plan.id %}" 
+                                           class="btn btn-warning btn-sm">
+                                            <i class="fas fa-edit"></i> Editar
+                                        </a>
+                                        <a href="{% url 'student_portal:plan_comments' plan.id 'custom' %}" 
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-comments"></i> Comentarios
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-plus-circle fa-3x text-muted mb-3"></i>
+                        <h5>No tienes planes personalizados</h5>
+                        <p class="text-muted">Crea tu propio plan de evaluación para gestionar mejor tus notas.</p>
+                    </div>
+                {% endif %}
+                
+                <!-- Crear Nuevo Plan -->
+                <div class="mt-3">
+                    <h6>Crear Nuevo Plan Personalizado:</h6>
+                    <div class="row">
+                        {% for group in available_groups %}
+                        <div class="col-md-6 col-lg-4 mb-2">
+                            <a href="{% url 'student_portal:create_custom_plan' group.id %}" 
+                               class="btn btn-outline-success btn-sm w-100">
+                                <i class="fas fa-plus"></i> {{ group.subject.code }} - G{{ group.number }}
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Planes Públicos de Otros Estudiantes -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-users"></i> Planes Públicos de la Comunidad
+                    <span class="badge bg-warning">{{ public_custom_plans.count }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if public_custom_plans %}
+                    <p class="text-muted mb-3">
+                        Explora planes creados por otros estudiantes. Puedes comentar y obtener ideas para tus propios planes.
+                    </p>
+                    <div class="row">
+                        {% for plan in public_custom_plans %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 border-warning">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">{{ plan.name }}</h6>
+                                    <small class="text-muted">{{ plan.group.subject.code }} - por {{ plan.student.user.first_name }} {{ plan.student.user.last_name }}</small>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ plan.group.subject.name }}</h6>
+                                    <p class="card-text">
+                                        <strong>Actividades:</strong> {{ plan.activities.count }}<br>
+                                        <strong>Creado:</strong> {{ plan.created_at|date:"d/m/Y" }}<br>
+                                        <strong>Estado:</strong> 
+                                        {% if plan.validate_total_percentage %}
+                                            <span class="badge bg-success">Válido (100%)</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Incompleto</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="card-footer bg-transparent">
+                                    <div class="btn-group w-100" role="group">
+                                        <a href="{% url 'student_portal:plan_comments' plan.id 'custom' %}" 
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-comments"></i> Ver y Comentar
+                                        </a>
+                                        <button class="btn btn-outline-secondary btn-sm" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#planModal{{ plan.id }}">
+                                            <i class="fas fa-eye"></i> Vista Previa
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal para Vista Previa -->
+                        <div class="modal fade" id="planModal{{ plan.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">{{ plan.name }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <h6>{{ plan.group.subject.name }} - {{ plan.group.subject.code }}</h6>
+                                        <p><strong>Creado por:</strong> {{ plan.student.user.first_name }} {{ plan.student.user.last_name }}</p>
+                                        
+                                        <h6 class="mt-3">Actividades:</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Actividad</th>
+                                                        <th>Porcentaje</th>
+                                                        <th>Fecha Límite</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for activity in plan.activities.all %}
+                                                    <tr>
+                                                        <td>{{ activity.name }}</td>
+                                                        <td><span class="badge bg-primary">{{ activity.percentage }}%</span></td>
+                                                        <td>
+                                                            {% if activity.due_date %}
+                                                                {{ activity.due_date|date:"d/m/Y" }}
+                                                            {% else %}
+                                                                <span class="text-muted">Sin fecha</span>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <a href="{% url 'student_portal:plan_comments' plan.id 'custom' %}" 
+                                           class="btn btn-primary">
+                                            <i class="fas fa-comments"></i> Ver Comentarios
+                                        </a>
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-share-alt fa-3x text-muted mb-3"></i>
+                        <h5>No hay planes públicos disponibles</h5>
+                        <p class="text-muted">Sé el primero en compartir un plan con la comunidad marcándolo como público.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FontAwesome para iconos -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<style>
+.card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.border-success {
+    border-color: #28a745 !important;
+}
+
+.border-info {
+    border-color: #17a2b8 !important;
+}
+
+.border-warning {
+    border-color: #ffc107 !important;
+}
+
+.btn-group .btn {
+    flex: 1;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.modal-body .table {
+    margin-bottom: 0;
+}
+</style>
+{% endblock %} 
