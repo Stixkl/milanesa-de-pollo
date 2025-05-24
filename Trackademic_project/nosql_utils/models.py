@@ -2,6 +2,7 @@ from django.conf import settings
 from .mongo_client import MongoDBClient
 import uuid
 from datetime import datetime
+from mongoengine import Document, StringField, DateTimeField
 
 class MongoDocument:
     collection_name = None
@@ -349,3 +350,14 @@ class PlanAnalytics(MongoDocument):
         # Ordenar por popularidad
         popular_plans = sorted(plan_counts.items(), key=lambda x: x[1], reverse=True)
         return popular_plans[:limit]
+
+
+class TestDocument(Document):
+    name = StringField(required=True)
+    description = StringField()
+    created_at = DateTimeField(default=datetime.utcnow)
+
+    meta = {
+        'collection': 'test_collection',
+        'db_alias': 'default'
+    }

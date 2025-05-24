@@ -5,13 +5,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 class MongoDBClient:
-    """Utility class for MongoDB connection and operations"""
     _instance = None
     _client = None
     _db = None
     
     def __new__(cls):
-        """Singleton pattern to ensure only one connection is created"""
         if cls._instance is None:
             cls._instance = super(MongoDBClient, cls).__new__(cls)
             try:
@@ -26,18 +24,15 @@ class MongoDBClient:
     
     @property
     def db(self):
-        """Return the database instance"""
         return self._db
     
     def get_collection(self, collection_name):
-        """Get a collection by name"""
         if self._db is None:
             logger.error("No MongoDB connection available")
             return None
         return self._db[collection_name]
     
     def insert_document(self, collection_name, document):
-        """Insert a document into a collection"""
         collection = self.get_collection(collection_name)
         if collection:
             try:
@@ -48,7 +43,6 @@ class MongoDBClient:
         return None
     
     def find_documents(self, collection_name, query=None, projection=None):
-        """Find documents in a collection"""
         collection = self.get_collection(collection_name)
         if collection:
             try:
@@ -58,7 +52,6 @@ class MongoDBClient:
         return []
     
     def update_document(self, collection_name, query, update):
-        """Update a document in a collection"""
         collection = self.get_collection(collection_name)
         if collection:
             try:
@@ -69,7 +62,6 @@ class MongoDBClient:
         return 0
     
     def delete_document(self, collection_name, query):
-        """Delete a document from a collection"""
         collection = self.get_collection(collection_name)
         if collection:
             try:
@@ -80,7 +72,6 @@ class MongoDBClient:
         return 0
     
     def close(self):
-        """Close the MongoDB connection"""
         if self._client:
             self._client.close()
-            logger.info("MongoDB connection closed") 
+            logger.info("MongoDB connection closed")

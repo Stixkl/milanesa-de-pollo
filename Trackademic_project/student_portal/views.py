@@ -141,26 +141,21 @@ def course_detail(request, group_id):
 
 @login_required
 def evaluation_plans(request):
-    """Vista para gestionar planes de evaluación"""
     student_profile = request.user.student_profile
     active_semester = Semester.objects.filter(is_active=True).first()
     
-    # Obtener todos los grupos disponibles
     available_groups = Group.objects.filter(
         semester=active_semester.name if active_semester else None
     ).select_related('subject', 'professor')
     
-    # Obtener planes oficiales
     official_plans = EvaluationPlan.objects.filter(
         group__in=available_groups
     ).select_related('group__subject')
     
-    # Obtener planes personalizados del usuario
     custom_plans = CustomEvaluationPlan.objects.filter(
         student=student_profile
     ).select_related('group__subject')
     
-    # Obtener planes personalizados públicos de otros usuarios
     public_custom_plans = CustomEvaluationPlan.objects.filter(
         is_public=True
     ).exclude(
@@ -180,7 +175,6 @@ def evaluation_plans(request):
 
 @login_required
 def create_custom_plan(request, group_id):
-    """Crear un plan de evaluación personalizado"""
     group = get_object_or_404(Group, id=group_id)
     student_profile = request.user.student_profile
     
@@ -188,7 +182,6 @@ def create_custom_plan(request, group_id):
         plan_name = request.POST.get('plan_name')
         is_public = request.POST.get('is_public') == 'on'
         
-        # Crear el plan
         custom_plan = CustomEvaluationPlan.objects.create(
             name=plan_name,
             student=student_profile,
@@ -196,7 +189,6 @@ def create_custom_plan(request, group_id):
             is_public=is_public
         )
         
-        # Registrar actividad
         StudentActivity.log_activity(
             student_id=str(student_profile.id),
             activity_type='custom_plan_created',
