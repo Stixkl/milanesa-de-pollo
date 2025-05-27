@@ -65,76 +65,14 @@
                         <a href="{% url 'student_portal:reports_dashboard' %}" class="nav-link">
                             <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
                             <span class="nav-text">Estadísticas</span>
-                            <span class="nav-badge">Pro</span>
                         </a>
                     </div>
                     {% endif %}
                 </div>
                 
-                <!-- Sección Académica -->
-                {% if user.is_authenticated %}
-                <div class="nav-section">
-                    <div class="nav-section-title">Académico</div>
-                    <div class="nav-item">
-                        <a href="{% url 'student_portal:evaluation_plans' %}" class="nav-link">
-                            <span class="nav-icon"><i class="fas fa-tasks"></i></span>
-                            <span class="nav-text">Planes de Evaluación</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="{% url 'student_portal:collaborative_dashboard' %}" class="nav-link">
-                            <span class="nav-icon"><i class="fas fa-users"></i></span>
-                            <span class="nav-text">Colaborativo</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="#" class="nav-link" onclick="TrackademicUtils.showNotification('Próximamente disponible', 'info')">
-                            <span class="nav-icon"><i class="fas fa-calendar-alt"></i></span>
-                            <span class="nav-text">Calendario</span>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- Sección Herramientas -->
-                <div class="nav-section">
-                    <div class="nav-section-title">Herramientas</div>
-                    <div class="nav-item">
-                        <a href="#" class="nav-link" onclick="TrackademicUtils.showNotification('Próximamente disponible', 'info')">
-                            <span class="nav-icon"><i class="fas fa-bullseye"></i></span>
-                            <span class="nav-text">Metas Académicas</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="#" class="nav-link" onclick="TrackademicUtils.showNotification('Próximamente disponible', 'info')">
-                            <span class="nav-icon"><i class="fas fa-calculator"></i></span>
-                            <span class="nav-text">Calculadora</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="{% url 'student_portal:api_export_reports' %}" class="nav-link">
-                            <span class="nav-icon"><i class="fas fa-file-export"></i></span>
-                            <span class="nav-text">Exportar Datos</span>
-                        </a>
-                    </div>
-                </div>
-                {% endif %}
-                
                 <!-- Sección Sistema -->
                 <div class="nav-section">
-                    <div class="nav-section-title">Sistema</div>
                     {% if user.is_authenticated %}
-                    <div class="nav-item">
-                        <a href="#" class="nav-link">
-                            <span class="nav-icon"><i class="fas fa-user-cog"></i></span>
-                            <span class="nav-text">Mi Perfil</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="#" class="nav-link">
-                            <span class="nav-icon"><i class="fas fa-cog"></i></span>
-                            <span class="nav-text">Configuración</span>
-                        </a>
-                    </div>
                     <div class="nav-item">
                         <a href="{% url 'logout' %}" class="nav-link">
                             <span class="nav-icon"><i class="fas fa-sign-out-alt"></i></span>
@@ -161,61 +99,6 @@
 
         <!-- Contenido Principal -->
         <main class="main-content">
-            <!-- Header -->
-            <header class="header">
-                <div class="header-left">
-                    <button class="sidebar-toggle" data-tooltip="Alternar menú">
-                        <i class="fas fa-bars"></i>
-                    </button>
-                    
-                    <nav class="breadcrumb">
-                        {% block breadcrumb %}
-                        <div class="breadcrumb-item">
-                            <i class="fas fa-home"></i>
-                            <span>Inicio</span>
-                        </div>
-                        {% endblock %}
-                    </nav>
-                </div>
-                
-                <div class="header-right">
-                    <!-- Caja de búsqueda -->
-                    <div class="search-box">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" class="search-input" placeholder="Buscar...">
-                    </div>
-                    
-                    <!-- Acciones del header -->
-                    <div class="header-actions">
-                        <button class="action-btn" data-tooltip="Notificaciones">
-                            <i class="fas fa-bell"></i>
-                            <span class="notification-badge">3</span>
-                        </button>
-                        
-                        <button class="action-btn" data-tooltip="Mensajes">
-                            <i class="fas fa-envelope"></i>
-                        </button>
-                        
-                        <button class="action-btn" data-tooltip="Ayuda">
-                            <i class="fas fa-question-circle"></i>
-                        </button>
-                    </div>
-                    
-                    <!-- Menú de usuario -->
-                    {% if user.is_authenticated %}
-                    <div class="user-menu">
-                        <div class="user-avatar">
-                            {{ user.first_name|first|default:user.username|first|upper }}
-                        </div>
-                        <div class="user-info">
-                            <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
-                            <div class="user-role">Estudiante</div>
-                        </div>
-                        <i class="fas fa-chevron-down"></i>
-                    </div>
-                    {% endif %}
-                </div>
-            </header>
 
             <!-- Contenido de la página -->
             <div class="page-content">
