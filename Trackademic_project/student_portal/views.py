@@ -115,6 +115,20 @@ def courses_dashboard(request):
         if created or not semester_summary.updated_at:
             semester_summary.update_summary()
     
+    # Obtener todos los resúmenes de semestre del estudiante
+    all_summaries = SemesterSummary.objects.filter(student=student_profile)
+    if all_summaries.exists():
+        total_credits = sum(s.credits_attempted for s in all_summaries)
+        total_earned_credits = sum(s.credits_earned for s in all_summaries)
+        weighted_sum = sum(float(s.average_grade) * s.credits_attempted for s in all_summaries)
+        if total_credits > 0:
+            global_average = weighted_sum / total_credits
+        else:
+            global_average = 0.0
+    else:
+        global_average = 0.0
+        total_earned_credits = 0
+    
     # Registrar actividad
     StudentActivity.log_activity(
         student_id=str(student_profile.id),
@@ -128,6 +142,8 @@ def courses_dashboard(request):
         'total_courses': total_courses,
         'completed_activities': completed_activities,
         'semester_summary': semester_summary,
+        'global_average': global_average,
+        'global_credits_earned': total_earned_credits,
     }
     
     return render(request, 'student_portal/courses_dashboard.html', context)

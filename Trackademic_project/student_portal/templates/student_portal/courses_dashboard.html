@@ -47,8 +47,8 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between">
                             <div>
-                                <h4>{% if semester_summary %}{{ semester_summary.average_grade|floatformat:2 }}{% else %}0.00{% endif %}</h4>
-                                <span>Promedio Semestre</span>
+                                <h4>{{ global_average|floatformat:2 }}</h4>
+                                <span>Promedio Global</span>
                             </div>
                             <div class="align-self-center">
                                 <i class="fas fa-trophy fa-2x"></i>
@@ -62,7 +62,7 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between">
                             <div>
-                                <h4>{% if semester_summary %}{{ semester_summary.credits_earned }}{% else %}0{% endif %}</h4>
+                                <h4>{{ global_credits_earned }}</h4>
                                 <span>Créditos Ganados</span>
                             </div>
                             <div class="align-self-center">

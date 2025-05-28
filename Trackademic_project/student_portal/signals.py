@@ -62,6 +62,15 @@ def update_mongodb_analytics(sender, instance, created, **kwargs):
             AnalyticsSummary.update({'group_id': group_id}, {'data': data})
         else:
             AnalyticsSummary.create_for_group(group_id, data)
+        
+        # Actualizar el resumen de semestre del estudiante
+        from student_portal.models import SemesterSummary
+        semester = instance.activity.plan.group.subject.semester
+        summary, _ = SemesterSummary.objects.get_or_create(
+            student=instance.student,
+            semester=semester
+        )
+        summary.update_summary()
             
     except ImportError:
         # MongoDB utilities not available
