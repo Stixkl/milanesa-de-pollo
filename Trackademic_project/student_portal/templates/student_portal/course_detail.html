@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load dict_extras %}
 
 {% block title %}{{ group.subject.name }} - Detalle{% endblock %}
 
@@ -90,7 +91,6 @@
                                     <th>Actividad</th>
                                     <th>Descripción</th>
                                     <th>Porcentaje</th>
-                                    <th>Fecha Límite</th>
                                     <th>Calificación</th>
                                     <th>Estado</th>
                                 </tr>
@@ -104,20 +104,15 @@
                                         <span class="badge bg-primary">{{ activity.percentage }}%</span>
                                     </td>
                                     <td>
-                                        {% if activity.due_date %}
-                                            {{ activity.due_date|date:"d/m/Y" }}
-                                        {% else %}
-                                            <span class="text-muted">Sin fecha</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if activity.id in grade_dict %}
-                                            <strong class="{% if grade_dict.activity.id.grade >= 3.0 %}text-success{% elif grade_dict.activity.id.grade >= 2.5 %}text-warning{% else %}text-danger{% endif %}">
-                                                {{ grade_dict.activity.id.grade|floatformat:2 }}
-                                            </strong>
-                                        {% else %}
-                                            <span class="text-muted">Sin calificar</span>
-                                        {% endif %}
+                                        {% with grade=grade_dict|dict_get:activity.id %}
+                                            {% if grade %}
+                                                <strong class="{% if grade.grade >= 3.0 %}text-success{% elif grade.grade >= 2.5 %}text-warning{% else %}text-danger{% endif %}">
+                                                    {{ grade.grade|floatformat:2 }}
+                                                </strong>
+                                            {% else %}
+                                                <span class="text-muted">Sin calificar</span>
+                                            {% endif %}
+                                        {% endwith %}
                                     </td>
                                     <td>
                                         {% if activity.id in grade_dict %}
