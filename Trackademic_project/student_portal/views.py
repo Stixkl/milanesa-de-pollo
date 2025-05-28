@@ -26,23 +26,22 @@ def courses_dashboard(request):
         messages.error(request, 'Primero debes crear tu perfil de estudiante.')
         return redirect('home')
     
-    # Obtener semestre activo
+    # Obtener semestre activo para mostrar información
     active_semester = Semester.objects.filter(is_active=True).first()
     
-    # Obtener inscripciones del semestre actual
-    current_enrollments = StudentEnrollment.objects.filter(
-        student=student_profile,
-        group__subject__semester=active_semester
-    ).select_related('group__subject', 'group__professor')
+    # Obtener TODAS las inscripciones del estudiante (sin filtrar por semestre)
+    all_enrollments = StudentEnrollment.objects.filter(
+        student=student_profile
+    ).select_related('group__subject__semester__program', 'group__professor')
     
     # Calcular estadísticas generales
-    total_courses = current_enrollments.count()
+    total_courses = all_enrollments.count()
     completed_activities = StudentGrade.objects.filter(
         student=student_profile,
-        activity__plan__group__in=[e.group for e in current_enrollments]
+        activity__plan__group__in=[e.group for e in all_enrollments]
     ).count()
     
-    # Obtener resumen del semestre
+    # Obtener resumen del semestre activo (solo para mostrar estadísticas)
     semester_summary = None
     if active_semester:
         semester_summary, created = SemesterSummary.objects.get_or_create(
@@ -61,7 +60,7 @@ def courses_dashboard(request):
     context = {
         'student_profile': student_profile,
         'active_semester': active_semester,
-        'enrollments': current_enrollments,
+        'enrollments': all_enrollments,  # Cambiado para mostrar todas las inscripciones
         'total_courses': total_courses,
         'completed_activities': completed_activities,
         'semester_summary': semester_summary,
@@ -141,23 +140,24 @@ def evaluation_plans(request):
     student_profile = request.user.student_profile
     active_semester = Semester.objects.filter(is_active=True).first()
     
-    available_groups = Group.objects.filter(
-        subject__semester=active_semester if active_semester else None
-    ).select_related('subject', 'professor')
+    # Mostrar grupos de TODOS los semestres, no solo del activo
+    available_groups = Group.objects.all().select_related(
+        'subject__semester__program', 'professor'
+    )
     
     official_plans = EvaluationPlan.objects.filter(
         group__in=available_groups
-    ).select_related('group__subject')
+    ).select_related('group__subject__semester')
     
     custom_plans = CustomEvaluationPlan.objects.filter(
         student=student_profile
-    ).select_related('group__subject')
+    ).select_related('group__subject__semester')
     
     public_custom_plans = CustomEvaluationPlan.objects.filter(
         is_public=True
     ).exclude(
         student=student_profile
-    ).select_related('group__subject', 'student__user')
+    ).select_related('group__subject__semester', 'student__user')
     
     context = {
         'available_groups': available_groups,
@@ -406,7 +406,7 @@ def reports_dashboard(request):
     # Informe 2: Análisis de materias más difíciles con estadísticas avanzadas
     enrollments = StudentEnrollment.objects.filter(
         student=student_profile
-    ).select_related('group__subject', 'semester')
+    ).select_related('group__subject__semester', 'group__subject__semester__program')
     
     subject_performance = []
     subject_stats = {
@@ -423,7 +423,7 @@ def reports_dashboard(request):
             subject_data = {
                 'subject': enrollment.group.subject,
                 'grade': current_grade,
-                'semester': enrollment.semester,
+                'semester': enrollment.group.subject.semester,
                 'credits': enrollment.group.subject.credits,
                 'risk_level': 'Alto' if current_grade < 3.0 else 'Medio' if current_grade < 3.5 else 'Bajo',
                 'trend': 'Estable'  # Esto se puede mejorar con datos históricos
@@ -445,7 +445,7 @@ def reports_dashboard(request):
         subject_stats['average_difficulty'] = sum(s['grade'] for s in subject_performance) / len(subject_performance)
         # Área de mayor riesgo (programa con más materias difíciles)
         if subject_stats['below_3'] > 0:
-            subject_stats['highest_risk_area'] = subject_performance[0]['subject'].program.name
+            subject_stats['highest_risk_area'] = subject_performance[0]['subject'].semester.program.name
     
     # Nuevas métricas avanzadas
     
@@ -550,7 +550,7 @@ def semester_summary(request, semester_id):
     # Obtener inscripciones del semestre
     enrollments = StudentEnrollment.objects.filter(
         student=student_profile,
-        semester=semester
+        group__subject__semester=semester
     ).select_related('group__subject', 'group__professor')
     
     # Calcular detalles por materia
@@ -884,7 +884,7 @@ def api_export_reports(request):
     # Análisis de materias
     enrollments = StudentEnrollment.objects.filter(
         student=student_profile
-    ).select_related('group__subject', 'semester')
+    ).select_related('group__subject__semester', 'group__subject__semester__program')
     
     for enrollment in enrollments:
         current_grade = enrollment.current_grade()
@@ -892,7 +892,7 @@ def api_export_reports(request):
             export_data['subject_analysis'].append({
                 'subject_code': enrollment.group.subject.code,
                 'subject_name': enrollment.group.subject.name,
-                'semester': enrollment.semester.name,
+                'semester': enrollment.group.subject.semester.name,
                 'current_grade': float(current_grade),
                 'credits': enrollment.group.subject.credits,
                 'risk_level': 'Alto' if current_grade < 3.0 else 'Medio' if current_grade < 3.5 else 'Bajo'
@@ -956,7 +956,7 @@ def api_realtime_stats(request):
     # Número de materias en riesgo
     enrollments = StudentEnrollment.objects.filter(
         student=student_profile,
-        semester=active_semester
+        group__subject__semester=active_semester
     ).select_related('group__subject')
     
     subjects_at_risk = 0
@@ -1109,7 +1109,7 @@ def api_alerts(request):
     if active_semester:
         enrollments = StudentEnrollment.objects.filter(
             student=student_profile,
-            semester=active_semester
+            group__subject__semester=active_semester
         ).select_related('group__subject')
         
         for enrollment in enrollments:

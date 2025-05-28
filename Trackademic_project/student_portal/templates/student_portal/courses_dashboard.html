@@ -86,6 +86,7 @@
         <div class="alert alert-info mb-4">
             <h5><i class="fas fa-calendar-alt"></i> Semestre Activo: {{ active_semester.name }}</h5>
             <p class="mb-0">Período: {{ active_semester.start_date }} - {{ active_semester.end_date }}</p>
+            <small class="text-muted">Mostrando todos tus cursos de todos los semestres</small>
         </div>
         {% endif %}
 
@@ -93,7 +94,7 @@
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0 d-flex align-items-center">
-                    <i class="fas fa-list me-2"></i> Cursos del Semestre
+                    <i class="fas fa-list me-2"></i> Todos mis Cursos
                     <a href="{% url 'student_portal:evaluation_plans' %}" class="btn btn-success btn-sm ms-auto">
                         <i class="fas fa-plus"></i> Agregar Curso
                     </a>
@@ -105,13 +106,17 @@
                         {% for enrollment in enrollments %}
                         <div class="col-md-6 col-lg-4 mb-4">
                             <div class="card h-100 shadow-sm">
-                                <div class="card-header bg-light">
-                                    <h6 class="mb-0">{{ enrollment.group.subject.code }}</h6>
-                                    <small class="text-muted">Grupo {{ enrollment.group.number }}</small>
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0">{{ enrollment.group.subject.code }}</h6>
+                                        <small class="text-muted">Grupo {{ enrollment.group.number }}</small>
+                                    </div>
+                                    <span class="badge bg-secondary">{{ enrollment.group.subject.semester.name }}</span>
                                 </div>
                                 <div class="card-body">
                                     <h6 class="card-title">{{ enrollment.group.subject.name }}</h6>
                                     <p class="card-text">
+                                        <strong>Programa:</strong> {{ enrollment.group.subject.semester.program.name }}<br>
                                         <strong>Profesor:</strong> {{ enrollment.group.professor.first_name }} {{ enrollment.group.professor.last_name }}<br>
                                         <strong>Créditos:</strong> {{ enrollment.group.subject.credits }}<br>
                                         <strong>Nota Actual:</strong> 
