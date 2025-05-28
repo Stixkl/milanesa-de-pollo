@@ -32,7 +32,7 @@ def courses_dashboard(request):
     # Obtener inscripciones del semestre actual
     current_enrollments = StudentEnrollment.objects.filter(
         student=student_profile,
-        semester=active_semester
+        group__subject__semester=active_semester
     ).select_related('group__subject', 'group__professor')
     
     # Calcular estadísticas generales
@@ -142,7 +142,7 @@ def evaluation_plans(request):
     active_semester = Semester.objects.filter(is_active=True).first()
     
     available_groups = Group.objects.filter(
-        semester=active_semester.name if active_semester else None
+        subject__semester=active_semester if active_semester else None
     ).select_related('subject', 'professor')
     
     official_plans = EvaluationPlan.objects.filter(
@@ -1401,12 +1401,11 @@ def admin_group_analytics(request, group_id):
 def add_course(request, group_id):
     student_profile = request.user.student_profile
     group = get_object_or_404(Group, id=group_id)
-    # Obtener la instancia de Semester directamente
-    semester = group.semester
+    
     # Verifica si ya está inscrito
     if StudentEnrollment.objects.filter(student=student_profile, group=group).exists():
         messages.info(request, "Ya estás inscrito en este curso.")
     else:
-        StudentEnrollment.objects.create(student=student_profile, group=group, semester=semester)
+        StudentEnrollment.objects.create(student=student_profile, group=group)
         messages.success(request, "Te has inscrito exitosamente en el curso.")
     return redirect('student_portal:courses_dashboard')

@@ -101,10 +101,25 @@ class Program(models.Model):
     def __str__(self):
         return self.name
 
+class Semester(models.Model):
+    name = models.CharField(max_length=20)  # Ej: '2023-2', '2024-1'
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='semesters', default=1)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    is_active = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.program.name} - {self.name}"
+
+    class Meta:
+        ordering = ['-name']  # Más recientes primero
+        unique_together = ('name', 'program')  # Un semestre por programa
+
 class Subject(models.Model):
     code = models.CharField(max_length=10, primary_key=True)
     name = models.CharField(max_length=30)
-    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='subjects')
+    semester = models.ForeignKey(Semester, on_delete=models.CASCADE, related_name='subjects', default=1)
     credits = models.PositiveIntegerField(default=3, help_text="Number of academic credits for this subject")
 
     def __str__(self):
@@ -112,20 +127,29 @@ class Subject(models.Model):
 
 class Group(models.Model):
     number = models.IntegerField()
-    semester = models.ForeignKey('Semester', on_delete=models.CASCADE, related_name='groups', null=True, blank=True)  # Renombrado de semester_fk
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='groups')
     professor = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='teaching_groups')
 
     class Meta:
-        unique_together = ('number', 'subject', 'semester')
+        unique_together = ('number', 'subject')
 
     def __str__(self):
-        return f"{self.subject.code} - Group {self.number} ({self.semester.name})"
+        return f"{self.subject.code} - Group {self.number} ({self.subject.semester.name})"
+
+    @property
+    def semester(self):
+        """Obtener el semestre a través de la materia"""
+        return self.subject.semester
 
     @property
     def semester_name(self):
         """Obtener el nombre del semestre"""
-        return self.semester.name
+        return self.subject.semester.name
+
+    @property
+    def program(self):
+        """Obtener el programa a través de la materia y semestre"""
+        return self.subject.semester.program
 
 class StudentProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')
@@ -137,16 +161,3 @@ class StudentProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name} ({self.student_id})"
-
-class Semester(models.Model):
-    name = models.CharField(max_length=20, unique=True)  # Ej: '2023-2', '2024-1'
-    start_date = models.DateField()
-    end_date = models.DateField()
-    is_active = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        ordering = ['-name']  # Más recientes primero

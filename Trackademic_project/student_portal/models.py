@@ -2,35 +2,17 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField
-from academic_data.models import Group, Subject, StudentProfile
+from academic_data.models import Group, Subject, StudentProfile, Semester
 from decimal import Decimal
-
-
-class Semester(models.Model):
-    """
-    Nuevo modelo para representar un semestre académico.
-    Permite agrupar las materias por periodo y facilita la consulta
-    de notas consolidadas por semestre.
-    """
-    name = models.CharField(max_length=20)  # Ej: "2023-1", "2023-2"
-    start_date = models.DateField()
-    end_date = models.DateField()
-    is_active = models.BooleanField(default=True)
-    
-    class Meta:
-        ordering = ['-start_date']
-    def __str__(self):
-        return self.name
 
 
 class StudentEnrollment(models.Model):
     """
-    Nuevo modelo que relaciona un estudiante con los grupos en los que está inscrito.
-    Permite consultar todas las materias que un estudiante está cursando en un semestre.
+    Modelo que relaciona un estudiante con los grupos en los que está inscrito.
+    El semestre se obtiene automáticamente a través del grupo.
     """
     student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE, related_name='enrollments')
     group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='enrolled_students')
-    semester = models.ForeignKey(Semester, on_delete=models.CASCADE, related_name='enrollments')
     enrollment_date = models.DateField(auto_now_add=True)
     
     class Meta:
@@ -38,6 +20,11 @@ class StudentEnrollment(models.Model):
     
     def __str__(self):
         return f"{self.student} enrolled in {self.group}"
+    
+    @property
+    def semester(self):
+        """Obtener el semestre a través del grupo"""
+        return self.group.semester
     
     def current_grade(self):
         """Calcula la nota actual del estudiante en este grupo"""
@@ -191,9 +178,10 @@ class SemesterSummary(models.Model):
     
     def update_summary(self):
         """Actualiza el resumen del semestre basado en las notas actuales"""
+        # Buscar inscripciones donde el semestre del grupo coincida con este semestre
         enrollments = StudentEnrollment.objects.filter(
             student=self.student,
-            semester=self.semester
+            group__subject__semester=self.semester
         )
         
         total_weighted_grade = Decimal('0.00')
