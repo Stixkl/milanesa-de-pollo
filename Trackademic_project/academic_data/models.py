@@ -106,6 +106,8 @@ class Semester(models.Model):
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='semesters', default=1)
     is_active = models.BooleanField(default=False, help_text="Whether this semester is currently active for enrollment")
     created_at = models.DateTimeField(auto_now_add=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.program.name} - Semestre {self.number}"

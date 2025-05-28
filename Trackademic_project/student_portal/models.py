@@ -272,9 +272,9 @@ class CustomGrade(models.Model):
 # Fallback models for when MongoDB is not available
 class PlanComment(models.Model):
     """Fallback comment model using Django ORM"""
-    plan_id = models.IntegerField()
-    plan_type = models.CharField(max_length=20, choices=[('official', 'Official'), ('custom', 'Custom')])
-    student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE)
+    plan_id = models.IntegerField(null=True, blank=True, default=None)
+    plan_type = models.CharField(max_length=20, choices=[('official', 'Official'), ('custom', 'Custom')], null=True, blank=True, default=None)
+    student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE, null=True, blank=True, default=None)
     content = models.TextField()
     comment_type = models.CharField(max_length=20, default='general', choices=[
         ('general', 'General'),
