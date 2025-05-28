@@ -44,8 +44,8 @@
                             <select class="form-select" id="semester" name="semester">
                                 <option value="">Todos los Semestres</option>
                                 {% for semester in program_semesters %}
-                                    <option value="{{ semester.id }}" 
-                                        {% if selected_semester == semester.id %}selected{% endif %}>
+                                    <option value="{{ semester.name }}" 
+                                        {% if selected_semester == semester.name %}selected{% endif %}>
                                         {{ semester.name }}
                                     </option>
                                 {% endfor %}
@@ -279,15 +279,31 @@ function updateSemesters() {
                 const doc = parser.parseFromString(html, 'text/html');
                 const newSemesterOptions = doc.querySelectorAll('#semester option');
                 
-                // Add new options
-                newSemesterOptions.forEach(option => {
-                    if (option.value !== '') {
+                // Add new options (skip the first "Todos los Semestres" option)
+                const addedSemesters = new Set();
+                newSemesterOptions.forEach((option, index) => {
+                    if (index > 0 && option.value !== '' && !addedSemesters.has(option.value)) {
                         semesterSelect.appendChild(option.cloneNode(true));
+                        addedSemesters.add(option.value);
                     }
                 });
             })
             .catch(error => {
                 console.error('Error fetching semesters:', error);
+                // Fallback: show all available semesters
+                {% if all_semesters %}
+                const allSemesters = [
+                    {% for semester in all_semesters %}
+                    { name: "{{ semester.name }}" }{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ];
+                allSemesters.forEach(semester => {
+                    const option = document.createElement('option');
+                    option.value = semester.name;
+                    option.textContent = semester.name;
+                    semesterSelect.appendChild(option);
+                });
+                {% endif %}
             });
     }
 }

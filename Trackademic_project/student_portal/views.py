@@ -157,7 +157,13 @@ def evaluation_plans(request):
         groups_query = groups_query.filter(subject__semester__program_id=program_filter)
     
     if semester_filter:
-        groups_query = groups_query.filter(subject__semester_id=semester_filter)
+        # Extraer el número del nombre del semestre (ej: "Semestre 2" -> 2)
+        try:
+            semester_number = int(semester_filter.split()[-1])  # Obtener último número
+            groups_query = groups_query.filter(subject__semester__number=semester_number)
+        except (ValueError, IndexError):
+            # Si no se puede extraer el número, no aplicar filtro
+            pass
 
     # Filtrar planes de evaluación basados en los grupos filtrados
     official_plans = EvaluationPlan.objects.filter(
@@ -190,13 +196,37 @@ def evaluation_plans(request):
         student=student_profile
     ).select_related('group__subject__semester', 'student__user')
     
-    # Obtener semestres para el dropdown
-    all_semesters = Semester.objects.all().order_by('program__name', 'number')
-    program_semesters = all_semesters
+    # Obtener semestres para el dropdown, agrupados por número
+    all_semesters = Semester.objects.all().order_by('number')
+    
+    # Obtener números únicos de semestres
+    unique_numbers = set()
+    for semester in all_semesters:
+        unique_numbers.add(semester.number)
+    
+    # Crear lista de semestres únicos
+    grouped_semesters = []
+    for number in sorted(unique_numbers):
+        grouped_semesters.append({
+            'name': f'Semestre {number}',
+            'number': number
+        })
+    
+    program_semesters = grouped_semesters
     
     # Si hay filtro de programa, obtener semestres específicos de ese programa
     if program_filter:
-        program_semesters = all_semesters.filter(program_id=program_filter)
+        program_specific_semesters = all_semesters.filter(program_id=program_filter).order_by('number')
+        program_unique_numbers = set()
+        for semester in program_specific_semesters:
+            program_unique_numbers.add(semester.number)
+        
+        program_semesters = []
+        for number in sorted(program_unique_numbers):
+            program_semesters.append({
+                'name': f'Semestre {number}',
+                'number': number
+            })
     
     context = {
         'available_groups': available_groups,
@@ -205,10 +235,10 @@ def evaluation_plans(request):
         'public_custom_plans': public_custom_plans,
         'active_semester': active_semester,
         'all_programs': all_programs,
-        'all_semesters': all_semesters,
+        'all_semesters': grouped_semesters,
         'program_semesters': program_semesters,
         'selected_program': int(program_filter) if program_filter else None,
-        'selected_semester': int(semester_filter) if semester_filter else None,
+        'selected_semester': semester_filter,
     }
     
     return render(request, 'student_portal/evaluation_plans.html', context)
