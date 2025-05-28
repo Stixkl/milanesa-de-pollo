@@ -14,7 +14,7 @@ from .models import (
     StudentGrade, PlanComment, SemesterSummary,
     CustomEvaluationPlan, CustomEvaluationActivity, CustomGrade
 )
-from academic_data.models import Group, Subject, StudentProfile
+from academic_data.models import Group, Subject, StudentProfile, Program
 from nosql_utils.models import StudentActivity, UserPreference, CollaborativeComment, PlanAnalytics
 
 @login_required
@@ -138,26 +138,53 @@ def course_detail(request, group_id):
 @login_required
 def evaluation_plans(request):
     student_profile = request.user.student_profile
-    active_semester = Semester.objects.filter(is_active=True).first()
+    active_semester = None  # No longer need this concept for filtering
     
-    # Mostrar grupos de TODOS los semestres, no solo del activo
-    available_groups = Group.objects.all().select_related(
+    # Obtener parámetros de filtro
+    program_filter = request.GET.get('program')
+    semester_filter = request.GET.get('semester')
+    
+    # Obtener todos los programas para el dropdown
+    all_programs = Program.objects.all().order_by('name')
+    
+    # Construir query para grupos
+    groups_query = Group.objects.all().select_related(
         'subject__semester__program', 'professor'
     )
     
+    # Aplicar filtros si están presentes
+    if program_filter:
+        groups_query = groups_query.filter(subject__semester__program_id=program_filter)
+    
+    if semester_filter:
+        groups_query = groups_query.filter(subject__semester_id=semester_filter)
+    
+    available_groups = groups_query
+    
+    # Filtrar planes de evaluación basados en los grupos filtrados
     official_plans = EvaluationPlan.objects.filter(
         group__in=available_groups
     ).select_related('group__subject__semester')
     
     custom_plans = CustomEvaluationPlan.objects.filter(
-        student=student_profile
+        student=student_profile,
+        group__in=available_groups
     ).select_related('group__subject__semester')
     
     public_custom_plans = CustomEvaluationPlan.objects.filter(
-        is_public=True
+        is_public=True,
+        group__in=available_groups
     ).exclude(
         student=student_profile
     ).select_related('group__subject__semester', 'student__user')
+    
+    # Obtener semestres para el dropdown
+    all_semesters = Semester.objects.all().order_by('program__name', 'number')
+    program_semesters = all_semesters
+    
+    # Si hay filtro de programa, obtener semestres específicos de ese programa
+    if program_filter:
+        program_semesters = all_semesters.filter(program_id=program_filter)
     
     context = {
         'available_groups': available_groups,
@@ -165,6 +192,11 @@ def evaluation_plans(request):
         'custom_plans': custom_plans,
         'public_custom_plans': public_custom_plans,
         'active_semester': active_semester,
+        'all_programs': all_programs,
+        'all_semesters': all_semesters,
+        'program_semesters': program_semesters,
+        'selected_program': int(program_filter) if program_filter else None,
+        'selected_semester': int(semester_filter) if semester_filter else None,
     }
     
     return render(request, 'student_portal/evaluation_plans.html', context)

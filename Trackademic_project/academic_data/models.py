@@ -102,19 +102,22 @@ class Program(models.Model):
         return self.name
 
 class Semester(models.Model):
-    name = models.CharField(max_length=20)  # Ej: '2023-2', '2024-1'
+    number = models.PositiveIntegerField(default=1, help_text="Academic semester number (1, 2, 3, etc.)")  # Ej: 1, 2, 3, 4
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='semesters', default=1)
-    start_date = models.DateField()
-    end_date = models.DateField()
-    is_active = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=False, help_text="Whether this semester is currently active for enrollment")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.program.name} - {self.name}"
+        return f"{self.program.name} - Semestre {self.number}"
 
     class Meta:
-        ordering = ['-name']  # Más recientes primero
-        unique_together = ('name', 'program')  # Un semestre por programa
+        ordering = ['program', 'number']  # Por programa y luego por número
+        unique_together = ('number', 'program')  # Un semestre por programa
+
+    @property
+    def name(self):
+        """Compatibility property for existing code"""
+        return f"Semestre {self.number}"
 
 class Subject(models.Model):
     code = models.CharField(max_length=10, primary_key=True)
