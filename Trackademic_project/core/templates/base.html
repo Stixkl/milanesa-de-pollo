@@ -47,6 +47,7 @@
             <nav class="sidebar-nav">
                 <!-- Sección Principal -->
                 <div class="nav-section">
+                    {% if user.is_authenticated %}
                     <div class="nav-section-title">Principal</div>
                     <div class="nav-item">
                         <a href="{% url 'home' %}" class="nav-link">
@@ -54,7 +55,6 @@
                             <span class="nav-text">Dashboard</span>
                         </a>
                     </div>
-                    {% if user.is_authenticated %}
                     <div class="nav-item">
                         <a href="{% url 'student_portal:courses_dashboard' %}" class="nav-link">
                             <span class="nav-icon"><i class="fas fa-book-open"></i></span>
@@ -74,10 +74,13 @@
                 <div class="nav-section">
                     {% if user.is_authenticated %}
                     <div class="nav-item">
-                        <a href="{% url 'logout' %}" class="nav-link">
-                            <span class="nav-icon"><i class="fas fa-sign-out-alt"></i></span>
-                            <span class="nav-text">Cerrar Sesión</span>
-                        </a>
+                        <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+                            {% csrf_token %}
+                            <button type="submit" class="nav-link-button">
+                                <span class="nav-icon"><i class="fas fa-sign-out-alt"></i></span>
+                                <span class="nav-text">Cerrar Sesión</span>
+                            </button>
+                        </form>
                     </div>
                     {% else %}
                     <div class="nav-item">
