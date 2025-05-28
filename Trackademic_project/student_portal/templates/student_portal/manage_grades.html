@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load dict_extras %}
 
 {% block title %}Gestionar Notas - {{ group.subject.name }}{% endblock %}
 
@@ -65,10 +66,8 @@
                                 <tr>
                                     <th>Actividad</th>
                                     <th>Porcentaje</th>
-                                    <th>Fecha Límite</th>
                                     <th>Calificación Actual</th>
                                     <th>Nueva Calificación</th>
-                                    <th>Notas</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
@@ -85,25 +84,15 @@
                                         <span class="badge bg-primary">{{ activity.percentage }}%</span>
                                     </td>
                                     <td>
-                                        {% if activity.due_date %}
-                                            {{ activity.due_date|date:"d/m/Y" }}
-                                        {% else %}
-                                            <span class="text-muted">Sin fecha</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if activity.id in grade_dict %}
-                                            {% with grade=grade_dict.activity.id %}
-                                                <strong class="{% if grade.grade >= 3.0 %}text-success{% elif grade.grade >= 2.5 %}text-warning{% else %}text-danger{% endif %}">
-                                                    {{ grade.grade|floatformat:2 }}
+                                        {% with grade=grade_dict|dict_get:activity.id %}
+                                            {% if grade %}
+                                                <strong class="{% if grade.grade >= 3 %}text-success{% elif grade.grade >= 2.5 %}text-warning{% else %}text-danger{% endif %}">
+                                                    {{ grade.grade|default:"(sin calificar)" }}
                                                 </strong>
-                                                {% if grade.notes %}
-                                                    <br><small class="text-muted">{{ grade.notes|truncatechars:30 }}</small>
-                                                {% endif %}
-                                            {% endwith %}
-                                        {% else %}
-                                            <span class="text-muted">Sin calificar</span>
-                                        {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">Sin calificar</span>
+                                            {% endif %}
+                                        {% endwith %}
                                     </td>
                                     <td>
                                         <form method="post" class="d-inline">
@@ -115,23 +104,23 @@
                                                    placeholder="0.0 - 5.0" style="width: 100px;">
                                     </td>
                                     <td>
-                                            <textarea name="notes" class="form-control" rows="2" 
-                                                      placeholder="Notas opcionales...">{% if activity.id in grade_dict %}{{ grade_dict.activity.id.notes }}{% endif %}</textarea>
-                                    </td>
-                                    <td>
                                             <button type="submit" class="btn btn-success btn-sm mb-1">
                                                 <i class="fas fa-save"></i> 
                                                 {% if activity.id in grade_dict %}Actualizar{% else %}Agregar{% endif %}
                                             </button>
                                         </form>
                                         {% if activity.id in grade_dict %}
-                                            <form method="post" action="{% url 'student_portal:delete_grade' grade_dict.activity.id.id plan_type %}" class="d-inline">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-danger btn-sm" 
-                                                        onclick="return confirm('¿Estás seguro de que quieres eliminar esta calificación?')">
-                                                    <i class="fas fa-trash"></i> Eliminar
-                                                </button>
-                                            </form>
+                                            {% with grade=grade_dict.activity.id %}
+                                                {% if grade.id %}
+                                                    <form method="post" action="{% url 'student_portal:delete_grade' grade.id plan_type %}" class="d-inline">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-danger btn-sm" 
+                                                                onclick="return confirm('¿Estás seguro de que quieres eliminar esta calificación?')">
+                                                            <i class="fas fa-trash"></i> Eliminar
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                            {% endwith %}
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -171,7 +160,7 @@
                                     <div class="card-body">
                                         <h6>Progreso del Curso</h6>
                                             <div class="progress mb-2">
-                                                <div class="progress-bar bg-success" role="progressbar" id="course-progress">
+                                                <div class="progress-bar bg-success" role="progressbar" id="course-progress" style="width: {{ progress_percentage|floatformat:0 }}%;">
                                                     {{ progress_percentage|floatformat:0 }}%
                                                 </div>
                                             </div>
@@ -205,7 +194,6 @@
                         <h6>Agregar Calificaciones:</h6>
                         <ul class="small">
                             <li>Ingresa una nota entre 0.0 y 5.0</li>
-                            <li>Agrega notas opcionales para recordar detalles</li>
                             <li>Haz clic en "Agregar" para guardar</li>
                         </ul>
                     </div>
@@ -261,10 +249,6 @@ input[type="number"]::-webkit-inner-spin-button {
 .text-success { color: #28a745 !important; }
 .text-warning { color: #ffc107 !important; }
 .text-danger { color: #dc3545 !important; }
-
-#course-progress {
-    width: p;
-}
 </style>
 
 <!-- JavaScript para mejorar la experiencia -->

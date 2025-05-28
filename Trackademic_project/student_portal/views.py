@@ -184,6 +184,11 @@ def course_detail(request, group_id):
     # Calcular nota actual solo si está inscrito
     current_grade = enrollment.current_grade() if (enrollment and official_plan) else Decimal('0.00')
     
+    # Calcular progreso del curso basado en porcentaje de actividades calificadas
+    total_percentage = sum(activity.percentage for activity in activities)
+    graded_percentage = sum(activity.percentage for activity in activities if activity.id in grade_dict)
+    progress_percentage = (graded_percentage / total_percentage * 100) if total_percentage > 0 else 0
+    
     context = {
         'group': group,
         'enrollment': enrollment,
@@ -194,6 +199,7 @@ def course_detail(request, group_id):
         'activities': activities,
         'grade_dict': grade_dict,
         'current_grade': current_grade,
+        'progress_percentage': progress_percentage,
     }
     
     return render(request, 'student_portal/course_detail.html', context)
@@ -488,26 +494,28 @@ def manage_grades(request, group_id):
         return redirect('student_portal:course_detail', group_id=group_id)
     
     if request.method == 'POST':
+        print('POST DATA:', request.POST)
         activity_id = request.POST.get('activity_id')
         grade_value = request.POST.get('grade')
-        notes = request.POST.get('notes', '')
         
         try:
-            grade_value = Decimal(grade_value)
+            grade_value = float(grade_value)
+            if grade_value < 0 or grade_value > 5:
+                raise ValueError('La nota debe ser un número entre 0.0 y 5.0')
             
             if plan_type == 'official':
                 activity = get_object_or_404(EvaluationActivity, id=activity_id)
                 grade, created = StudentGrade.objects.update_or_create(
                     student=student_profile,
                     activity=activity,
-                    defaults={'grade': grade_value, 'notes': notes}
+                    defaults={'grade': grade_value}
                 )
             else:
                 activity = get_object_or_404(CustomEvaluationActivity, id=activity_id)
                 grade, created = CustomGrade.objects.update_or_create(
                     student=student_profile,
                     activity=activity,
-                    defaults={'grade': grade_value, 'notes': notes}
+                    defaults={'grade': grade_value}
                 )
             
             # Registrar actividad
@@ -524,8 +532,9 @@ def manage_grades(request, group_id):
             action = 'agregada' if created else 'actualizada'
             messages.success(request, f'Calificación {action} exitosamente.')
             
-        except (ValueError, TypeError):
-            messages.error(request, 'Por favor ingresa una calificación válida.')
+        except (ValueError, TypeError) as e:
+            print('ERROR AL GUARDAR NOTA:', repr(e))
+            messages.error(request, 'Por favor ingresa una calificación válida (entero del 0 al 5).')
     
     # Obtener actividades y calificaciones
     if plan_type == 'official':
@@ -535,6 +544,7 @@ def manage_grades(request, group_id):
             activity__in=activities
         )
         grade_dict = {grade.activity_id: grade for grade in grades}
+        print('DEBUG grade_dict:', grade_dict)
     else:
         activities = active_plan.activities.all()
         grades = CustomGrade.objects.filter(
@@ -542,6 +552,12 @@ def manage_grades(request, group_id):
             activity__in=activities
         )
         grade_dict = {grade.activity_id: grade for grade in grades}
+        print('DEBUG grade_dict:', grade_dict)
+    
+    # Calcular progreso del curso basado en porcentaje de actividades calificadas
+    total_percentage = sum(activity.percentage for activity in activities)
+    graded_percentage = sum(activity.percentage for activity in activities if activity.id in grade_dict)
+    progress_percentage = (graded_percentage / total_percentage * 100) if total_percentage > 0 else 0
     
     context = {
         'group': group,
@@ -550,6 +566,7 @@ def manage_grades(request, group_id):
         'activities': activities,
         'grade_dict': grade_dict,
         'enrollment': enrollment,
+        'progress_percentage': progress_percentage,
     }
     
     return render(request, 'student_portal/manage_grades.html', context)

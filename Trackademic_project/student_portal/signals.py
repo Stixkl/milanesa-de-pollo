@@ -51,7 +51,7 @@ def update_mongodb_analytics(sender, instance, created, **kwargs):
         }
         
         if grades.exists():
-            grade_values = [g.grade for g in grades]
+            grade_values = [float(g.grade) for g in grades]
             data['average_grade'] = sum(grade_values) / len(grade_values)
             data['min_grade'] = min(grade_values)
             data['max_grade'] = max(grade_values)

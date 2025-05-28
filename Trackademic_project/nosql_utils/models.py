@@ -31,7 +31,7 @@ class MongoDocument:
     @classmethod
     def find_one(cls, query):
         client = MongoDBClient()
-        results = client.find_documents(cls.collection_name, query, limit=1)
+        results = client.find_documents(cls.collection_name, query)
         return results[0] if results else None
 
     @classmethod
