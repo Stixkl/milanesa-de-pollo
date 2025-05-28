@@ -1,0 +1,367 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Plan Personalizado - Trackademic{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'student_portal:evaluation_plans' %}">
+                            <i class="fas fa-clipboard-list"></i> Planes de Evaluación
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        Crear Plan Personalizado
+                    </li>
+                </ol>
+            </nav>
+
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-plus-circle text-success"></i> 
+                        Crear Plan Personalizado
+                    </h1>
+                    <p class="text-muted mb-0">
+                        Diseña tu propio plan de evaluación para {{ group.subject.name }}
+                    </p>
+                </div>
+                <a href="{% url 'student_portal:evaluation_plans' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver a Planes
+                </a>
+            </div>
+
+            <!-- Información del Curso -->
+            <div class="card mb-4 border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-book"></i> Información del Curso
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold">{{ group.subject.code }}</h6>
+                            <p class="mb-1">{{ group.subject.name }}</p>
+                            <small class="text-muted">
+                                <i class="fas fa-graduation-cap"></i> 
+                                {{ group.subject.semester.program.name }}
+                            </small>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between">
+                                <span><strong>Semestre:</strong></span>
+                                <span>{{ group.subject.semester.name }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span><strong>Créditos:</strong></span>
+                                <span>{{ group.subject.credits }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span><strong>Grupo:</strong></span>
+                                <span>{{ group.number }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span><strong>Profesor:</strong></span>
+                                <span>{{ group.professor.first_name }} {{ group.professor.last_name }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulario Principal -->
+            <div class="card shadow">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit"></i> Configuración del Plan
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="create-plan-form">
+                        {% csrf_token %}
+                        
+                        <!-- Información Básica -->
+                        <div class="row mb-4">
+                            <div class="col-md-8">
+                                <label for="plan_name" class="form-label fw-bold">
+                                    <i class="fas fa-tag"></i> Nombre del Plan *
+                                </label>
+                                <input type="text" 
+                                       class="form-control form-control-lg" 
+                                       id="plan_name" 
+                                       name="plan_name" 
+                                       placeholder="Ej: Mi Plan de {{ group.subject.name }}"
+                                       value="Plan Personalizado - {{ group.subject.name }}"
+                                       required>
+                                <div class="form-text">
+                                    Dale un nombre descriptivo a tu plan de evaluación
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-eye"></i> Visibilidad
+                                </label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           id="is_public" 
+                                           name="is_public">
+                                    <label class="form-check-label" for="is_public">
+                                        Hacer público
+                                    </label>
+                                </div>
+                                <div class="form-text">
+                                    Los planes públicos pueden ser vistos por otros estudiantes
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información sobre Planes Personalizados -->
+                        <div class="alert alert-info mb-4">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-info-circle"></i> ¿Qué es un Plan Personalizado?
+                            </h6>
+                            <p class="mb-2">
+                                Un plan personalizado te permite crear tu propia estructura de evaluación cuando no hay un plan oficial disponible. Puedes:
+                            </p>
+                            <ul class="mb-2">
+                                <li><strong>Definir actividades:</strong> Exámenes, tareas, proyectos, etc.</li>
+                                <li><strong>Asignar porcentajes:</strong> Distribución de calificaciones que sume 100%</li>
+                                <li><strong>Gestionar notas:</strong> Llevar un seguimiento personal de tu rendimiento</li>
+                                <li><strong>Compartir (opcional):</strong> Otros estudiantes pueden usar tu plan como referencia</li>
+                            </ul>
+                            <p class="mb-0">
+                                <strong>Nota:</strong> Este plan es para tu uso personal y no reemplaza el plan oficial del profesor.
+                            </p>
+                        </div>
+
+                        <!-- Plantillas Predeterminadas -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-magic"></i> Plantillas Rápidas
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted mb-3">
+                                    Selecciona una plantilla para comenzar rápidamente (podrás personalizarla después):
+                                </p>
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card h-100 border-secondary template-card" data-template="traditional">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-clipboard-check fa-2x text-primary mb-2"></i>
+                                                <h6>Tradicional</h6>
+                                                <small class="text-muted">
+                                                    2 Parciales + Trabajos + Final
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card h-100 border-secondary template-card" data-template="continuous">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-chart-line fa-2x text-success mb-2"></i>
+                                                <h6>Evaluación Continua</h6>
+                                                <small class="text-muted">
+                                                    Multiple tareas y quizzes
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card h-100 border-secondary template-card" data-template="project">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-project-diagram fa-2x text-warning mb-2"></i>
+                                                <h6>Basado en Proyectos</h6>
+                                                <small class="text-muted">
+                                                    Proyectos + Presentaciones
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="alert alert-light mt-3" id="template-preview" style="display: none;">
+                                    <h6>Vista previa de la plantilla:</h6>
+                                    <div id="template-activities"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'student_portal:evaluation_plans' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-save"></i> Crear Plan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Styles -->
+<style>
+.template-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid #dee2e6 !important;
+}
+
+.template-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-color: #007bff !important;
+}
+
+.template-card.selected {
+    border-color: #28a745 !important;
+    background-color: #f8f9fa;
+}
+
+.template-card.selected i {
+    color: #28a745 !important;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.card {
+    transition: transform 0.2s ease;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #218838 0%, #1c9971 100%);
+    transform: translateY(-1px);
+}
+
+.alert-info {
+    border-left: 4px solid #17a2b8;
+}
+
+.breadcrumb {
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+}
+</style>
+
+<!-- Scripts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Templates data
+    const templates = {
+        traditional: {
+            name: 'Tradicional',
+            activities: [
+                { name: 'Primer Parcial', percentage: 30, description: 'Examen parcial del primer corte' },
+                { name: 'Segundo Parcial', percentage: 30, description: 'Examen parcial del segundo corte' },
+                { name: 'Trabajos y Tareas', percentage: 25, description: 'Trabajos durante el semestre' },
+                { name: 'Examen Final', percentage: 15, description: 'Examen final acumulativo' }
+            ]
+        },
+        continuous: {
+            name: 'Evaluación Continua',
+            activities: [
+                { name: 'Quiz 1', percentage: 15, description: 'Primer quiz' },
+                { name: 'Quiz 2', percentage: 15, description: 'Segundo quiz' },
+                { name: 'Quiz 3', percentage: 15, description: 'Tercer quiz' },
+                { name: 'Tarea 1', percentage: 10, description: 'Primera tarea' },
+                { name: 'Tarea 2', percentage: 10, description: 'Segunda tarea' },
+                { name: 'Proyecto', percentage: 20, description: 'Proyecto semestral' },
+                { name: 'Participación', percentage: 15, description: 'Participación en clase' }
+            ]
+        },
+        project: {
+            name: 'Basado en Proyectos',
+            activities: [
+                { name: 'Proyecto 1', percentage: 25, description: 'Primer proyecto' },
+                { name: 'Proyecto 2', percentage: 25, description: 'Segundo proyecto' },
+                { name: 'Proyecto Final', percentage: 30, description: 'Proyecto final' },
+                { name: 'Presentaciones', percentage: 20, description: 'Presentaciones de proyectos' }
+            ]
+        }
+    };
+
+    // Template selection
+    const templateCards = document.querySelectorAll('.template-card');
+    const templatePreview = document.getElementById('template-preview');
+    const templateActivities = document.getElementById('template-activities');
+    let selectedTemplate = null;
+
+    templateCards.forEach(card => {
+        card.addEventListener('click', function() {
+            // Remove selection from all cards
+            templateCards.forEach(c => c.classList.remove('selected'));
+            
+            // Select current card
+            this.classList.add('selected');
+            selectedTemplate = this.dataset.template;
+            
+            // Show preview
+            showTemplatePreview(selectedTemplate);
+        });
+    });
+
+    function showTemplatePreview(templateKey) {
+        const template = templates[templateKey];
+        let html = '<div class="row">';
+        
+        template.activities.forEach(activity => {
+            html += `
+                <div class="col-md-6 mb-2">
+                    <div class="d-flex justify-content-between">
+                        <span><strong>${activity.name}:</strong></span>
+                        <span class="badge bg-primary">${activity.percentage}%</span>
+                    </div>
+                    <small class="text-muted">${activity.description}</small>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        templateActivities.innerHTML = html;
+        templatePreview.style.display = 'block';
+    }
+
+    // Form submission
+    document.getElementById('create-plan-form').addEventListener('submit', function(e) {
+        if (selectedTemplate) {
+            // Store selected template in a hidden field for processing after creation
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'selected_template';
+            hiddenInput.value = selectedTemplate;
+            this.appendChild(hiddenInput);
+        }
+    });
+
+    // Auto-focus on plan name
+    document.getElementById('plan_name').focus();
+});
+</script>
+
+<!-- FontAwesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+{% endblock %}

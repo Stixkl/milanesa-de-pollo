@@ -1,60 +1,438 @@
 {% extends 'base.html' %}
+
+{% block title %}Editar Plan: {{ custom_plan.name }} - Trackademic{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-  <h2>Editar Plan: {{ custom_plan.name }}</h2>
-  <form method="post">
-    {% csrf_token %}
-    <div class="mb-3">
-      <label for="plan_name" class="form-label">Nombre del Plan</label>
-      <input type="text" class="form-control" id="plan_name" name="plan_name" value="{{ custom_plan.name }}" required>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'student_portal:evaluation_plans' %}">
+                            <i class="fas fa-clipboard-list"></i> Planes de Evaluación
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'student_portal:evaluation_plans' %}">Mis Planes</a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        Editar Plan
+                    </li>
+                </ol>
+            </nav>
+
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-edit text-warning"></i> 
+                        Editar Plan Personalizado
+                    </h1>
+                    <p class="text-muted mb-0">
+                        {{ custom_plan.group.subject.code }} - {{ custom_plan.group.subject.name }}
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'student_portal:evaluation_plans' %}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-arrow-left"></i> Volver a Planes
+                    </a>
+                    {% if is_valid %}
+                        <span class="badge bg-success fs-6">
+                            <i class="fas fa-check-circle"></i> Plan Válido (100%)
+                        </span>
+                    {% else %}
+                        <span class="badge bg-warning fs-6">
+                            <i class="fas fa-exclamation-triangle"></i> Incompleto ({{ total_percentage }}%)
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Configuración del Plan -->
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-cog"></i> Configuración del Plan
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="plan_name" class="form-label fw-bold">
+                                        <i class="fas fa-tag"></i> Nombre del Plan
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="plan_name" 
+                                           name="plan_name" 
+                                           value="{{ custom_plan.name }}" 
+                                           required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-eye"></i> Visibilidad
+                                    </label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               id="is_public" 
+                                               name="is_public" 
+                                               {% if custom_plan.is_public %}checked{% endif %}>
+                                        <label class="form-check-label" for="is_public">
+                                            Plan público
+                                        </label>
+                                    </div>
+                                    <div class="form-text">
+                                        {% if custom_plan.is_public %}
+                                            Otros estudiantes pueden ver este plan
+                                        {% else %}
+                                            Solo tú puedes ver este plan
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" name="update_plan" class="btn btn-success w-100">
+                                    <i class="fas fa-save"></i> Actualizar Plan
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Resumen de Progreso -->
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-chart-pie"></i> Resumen de Evaluación
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="progress mb-3" style="height: 20px;">
+                                <div class="progress-bar {% if is_valid %}bg-success{% else %}bg-warning{% endif %}" 
+                                     style="width: {{ total_percentage }}%">
+                                    {{ total_percentage }}%
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Total Actividades:</span>
+                                <strong>{{ activities.count }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Porcentaje Total:</span>
+                                <strong>{{ total_percentage }}%</strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Estado:</span>
+                                {% if is_valid %}
+                                    <span class="badge bg-success">Completo</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Incompleto</span>
+                                {% endif %}
+                            </div>
+                            
+                            {% if not is_valid %}
+                                <div class="alert alert-warning mt-3 mb-0">
+                                    <small>
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        Faltan {{ remaining_percentage }}% para completar el plan
+                                    </small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gestión de Actividades -->
+                <div class="col-md-8">
+                    <!-- Agregar Nueva Actividad -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-plus"></i> Agregar Nueva Actividad
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" id="add-activity-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="add_activity" value="1">
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="activity_name" class="form-label fw-bold">
+                                            <i class="fas fa-tasks"></i> Nombre de la Actividad *
+                                        </label>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="activity_name"
+                                               name="activity_name" 
+                                               placeholder="Ej: Examen Parcial 1" 
+                                               required>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="activity_percentage" class="form-label fw-bold">
+                                            <i class="fas fa-percentage"></i> Porcentaje *
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" 
+                                                   class="form-control" 
+                                                   id="activity_percentage"
+                                                   name="activity_percentage" 
+                                                   placeholder="0" 
+                                                   min="1" 
+                                                   max="100" 
+                                                   required>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="due_date" class="form-label fw-bold">
+                                            <i class="fas fa-calendar"></i> Fecha Límite
+                                        </label>
+                                        <input type="date" 
+                                               class="form-control" 
+                                               id="due_date"
+                                               name="due_date">
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="activity_description" class="form-label fw-bold">
+                                        <i class="fas fa-align-left"></i> Descripción
+                                    </label>
+                                    <textarea class="form-control" 
+                                              id="activity_description"
+                                              name="activity_description" 
+                                              rows="2" 
+                                              placeholder="Descripción opcional de la actividad"></textarea>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="text-muted">
+                                        <small>
+                                            <i class="fas fa-info-circle"></i>
+                                            Disponible: <strong id="remaining-percentage">{{ remaining_percentage }}%</strong>
+                                        </small>
+                                    </div>
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-plus"></i> Agregar Actividad
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Actividades -->
+                    <div class="card">
+                        <div class="card-header bg-dark text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-list"></i> Actividades del Plan
+                                <span class="badge bg-light text-dark ms-2">{{ activities.count }}</span>
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if activities %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th><i class="fas fa-tasks"></i> Actividad</th>
+                                                <th class="text-center"><i class="fas fa-percentage"></i> Porcentaje</th>
+                                                <th class="text-center"><i class="fas fa-calendar"></i> Fecha Límite</th>
+                                                <th class="text-center"><i class="fas fa-cogs"></i> Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for activity in activities %}
+                                            <tr>
+                                                <td>
+                                                    <div>
+                                                        <strong>{{ activity.name }}</strong>
+                                                        {% if activity.description %}
+                                                            <br><small class="text-muted">{{ activity.description }}</small>
+                                                        {% endif %}
+                                                    </div>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-primary fs-6">{{ activity.percentage }}%</span>
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if activity.due_date %}
+                                                        <span class="text-muted">{{ activity.due_date|date:'d/m/Y' }}</span>
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    <button class="btn btn-sm btn-outline-warning" 
+                                                            onclick="editActivity({{ activity.id }}, '{{ activity.name }}', {{ activity.percentage }}, '{{ activity.description|default:"" }}')">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger" 
+                                                            onclick="deleteActivity({{ activity.id }}, '{{ activity.name }}')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <i class="fas fa-clipboard fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No hay actividades definidas</h5>
+                                    <p class="text-muted">Agrega tu primera actividad de evaluación</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="form-check mb-3">
-      <input class="form-check-input" type="checkbox" id="is_public" name="is_public" {% if custom_plan.is_public %}checked{% endif %}>
-      <label class="form-check-label" for="is_public">Hacer público este plan</label>
-    </div>
-    <button type="submit" name="update_plan" class="btn btn-success">Actualizar Plan</button>
-    <a href="{% url 'evaluation_plans' %}" class="btn btn-secondary">Volver</a>
-  </form>
-  <hr>
-  <h4>Actividades del Plan</h4>
-  <form method="post" class="row g-3">
-    {% csrf_token %}
-    <input type="hidden" name="add_activity" value="1">
-    <div class="col-md-4">
-      <input type="text" class="form-control" name="activity_name" placeholder="Nombre de la actividad" required>
-    </div>
-    <div class="col-md-3">
-      <input type="number" class="form-control" name="activity_percentage" placeholder="%" min="1" max="100" required>
-    </div>
-    <div class="col-md-3">
-      <input type="date" class="form-control" name="due_date">
-    </div>
-    <div class="col-md-2">
-      <button type="submit" class="btn btn-primary">Agregar</button>
-    </div>
-  </form>
-  <table class="table mt-3">
-    <thead>
-      <tr>
-        <th>Nombre</th>
-        <th>%</th>
-        <th>Fecha de entrega</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for activity in activities %}
-      <tr>
-        <td>{{ activity.name }}</td>
-        <td>{{ activity.percentage }}</td>
-        <td>{{ activity.due_date|date:'d/m/Y' }}</td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="3">No hay actividades aún.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  <div class="alert {% if is_valid %}alert-success{% else %}alert-danger{% endif %}">
-    Total porcentaje: <strong>{{ total_percentage }}%</strong> {% if not is_valid %}(¡Debe sumar 100%!) {% endif %}
-  </div>
 </div>
+
+<!-- Modal para Editar Actividad -->
+<div class="modal fade" id="editActivityModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit"></i> Editar Actividad
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="edit-activity-form">
+                {% csrf_token %}
+                <input type="hidden" name="edit_activity" value="1">
+                <input type="hidden" id="edit-activity-id" name="activity_id">
+                
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="edit-activity-name" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="edit-activity-name" name="activity_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-activity-percentage" class="form-label">Porcentaje</label>
+                        <input type="number" class="form-control" id="edit-activity-percentage" name="activity_percentage" min="1" max="100" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-activity-description" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="edit-activity-description" name="activity_description" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Styles -->
+<style>
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.progress {
+    background-color: #e9ecef;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+
+.badge.fs-6 {
+    font-size: 0.875rem !important;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.breadcrumb {
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+}
+
+.alert-warning {
+    border-left: 4px solid #ffc107;
+}
+</style>
+
+<!-- Scripts -->
+<script>
+// Calcular porcentaje restante en tiempo real
+document.getElementById('activity_percentage').addEventListener('input', function() {
+    const totalPercentage = {{ total_percentage }};
+    const inputValue = parseInt(this.value) || 0;
+    const remaining = 100 - totalPercentage - inputValue;
+    
+    document.getElementById('remaining-percentage').textContent = Math.max(0, remaining) + '%';
+    
+    if (remaining < 0) {
+        this.classList.add('is-invalid');
+        document.getElementById('remaining-percentage').style.color = 'red';
+    } else {
+        this.classList.remove('is-invalid');
+        document.getElementById('remaining-percentage').style.color = 'inherit';
+    }
+});
+
+// Funciones para editar y eliminar actividades
+function editActivity(id, name, percentage, description) {
+    document.getElementById('edit-activity-id').value = id;
+    document.getElementById('edit-activity-name').value = name;
+    document.getElementById('edit-activity-percentage').value = percentage;
+    document.getElementById('edit-activity-description').value = description;
+    
+    const modal = new bootstrap.Modal(document.getElementById('editActivityModal'));
+    modal.show();
+}
+
+function deleteActivity(id, name) {
+    if (confirm(`¿Estás seguro de que quieres eliminar la actividad "${name}"?`)) {
+        // Crear formulario para eliminar
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.innerHTML = `
+            {% csrf_token %}
+            <input type="hidden" name="delete_activity" value="1">
+            <input type="hidden" name="activity_id" value="${id}">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Auto-focus en el formulario de agregar actividad
+document.getElementById('activity_name').focus();
+</script>
+
+<!-- FontAwesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
 {% endblock %} 

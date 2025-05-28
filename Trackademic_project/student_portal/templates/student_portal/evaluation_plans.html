@@ -181,19 +181,44 @@
                                             <span class="badge bg-success">Válido (100%)</span>
                                         {% else %}
                                             <span class="badge bg-warning">Incompleto</span>
+                                        {% endif %}<br>
+                                        <strong>Inscripción:</strong>
+                                        {% if plan.is_enrolled %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle"></i> Inscrito
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-clock"></i> No inscrito
+                                            </span>
                                         {% endif %}
                                     </p>
                                 </div>
                                 <div class="card-footer bg-transparent">
-                                    <div class="btn-group w-100" role="group">
-                                        <a href="{% url 'student_portal:edit_custom_plan' plan.id %}" 
-                                           class="btn btn-warning btn-sm">
-                                            <i class="fas fa-edit"></i> Editar
-                                        </a>
-                                        <a href="{% url 'student_portal:plan_comments' plan.id 'custom' %}" 
-                                           class="btn btn-outline-primary btn-sm">
-                                            <i class="fas fa-comments"></i> Comentarios
-                                        </a>
+                                    <div class="d-grid gap-2">
+                                        <!-- Primera fila de botones -->
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'student_portal:edit_custom_plan' plan.id %}" 
+                                               class="btn btn-warning btn-sm">
+                                                <i class="fas fa-edit"></i> Editar
+                                            </a>
+                                            <a href="{% url 'student_portal:plan_comments' plan.id 'custom' %}" 
+                                               class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-comments"></i> Comentarios
+                                            </a>
+                                        </div>
+                                        <!-- Segunda fila - Agregar Curso -->
+                                        {% if plan.is_enrolled %}
+                                            <a href="{% url 'student_portal:courses_dashboard' %}" 
+                                               class="btn btn-outline-success btn-sm">
+                                                <i class="fas fa-check-circle"></i> Ya inscrito - Ver Mis Cursos
+                                            </a>
+                                        {% else %}
+                                            <a href="{% url 'student_portal:add_course' plan.group.id %}" 
+                                               class="btn btn-success btn-sm">
+                                                <i class="fas fa-plus-circle"></i> Agregar a Mis Cursos
+                                            </a>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>

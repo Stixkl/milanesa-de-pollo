@@ -158,22 +158,34 @@ def evaluation_plans(request):
     
     if semester_filter:
         groups_query = groups_query.filter(subject__semester_id=semester_filter)
-    
-    available_groups = groups_query
-    
+
     # Filtrar planes de evaluación basados en los grupos filtrados
     official_plans = EvaluationPlan.objects.filter(
-        group__in=available_groups
+        group__in=groups_query
     ).select_related('group__subject__semester')
+
+    # Para available_groups, solo incluir grupos que NO tienen plan oficial
+    groups_with_official_plans = EvaluationPlan.objects.filter(
+        group__in=groups_query
+    ).values_list('group_id', flat=True)
     
+    available_groups = groups_query.exclude(id__in=groups_with_official_plans)
+
     custom_plans = CustomEvaluationPlan.objects.filter(
         student=student_profile,
-        group__in=available_groups
+        group__in=groups_query  # Usar groups_query completo para planes personalizados
     ).select_related('group__subject__semester')
+    
+    # Agregar información de inscripción para los planes personalizados
+    for plan in custom_plans:
+        plan.is_enrolled = StudentEnrollment.objects.filter(
+            student=student_profile,
+            group=plan.group
+        ).exists()
     
     public_custom_plans = CustomEvaluationPlan.objects.filter(
         is_public=True,
-        group__in=available_groups
+        group__in=groups_query
     ).exclude(
         student=student_profile
     ).select_related('group__subject__semester', 'student__user')
@@ -210,7 +222,9 @@ def create_custom_plan(request, group_id):
     if request.method == 'POST':
         plan_name = request.POST.get('plan_name')
         is_public = request.POST.get('is_public') == 'on'
+        selected_template = request.POST.get('selected_template')
         
+        # Crear el plan personalizado
         custom_plan = CustomEvaluationPlan.objects.create(
             name=plan_name,
             student=student_profile,
@@ -218,14 +232,60 @@ def create_custom_plan(request, group_id):
             is_public=is_public
         )
         
+        # Si se seleccionó una plantilla, crear las actividades automáticamente
+        if selected_template:
+            templates = {
+                'traditional': [
+                    {'name': 'Primer Parcial', 'percentage': 30, 'description': 'Examen parcial del primer corte'},
+                    {'name': 'Segundo Parcial', 'percentage': 30, 'description': 'Examen parcial del segundo corte'},
+                    {'name': 'Trabajos y Tareas', 'percentage': 25, 'description': 'Trabajos durante el semestre'},
+                    {'name': 'Examen Final', 'percentage': 15, 'description': 'Examen final acumulativo'}
+                ],
+                'continuous': [
+                    {'name': 'Quiz 1', 'percentage': 15, 'description': 'Primer quiz'},
+                    {'name': 'Quiz 2', 'percentage': 15, 'description': 'Segundo quiz'},
+                    {'name': 'Quiz 3', 'percentage': 15, 'description': 'Tercer quiz'},
+                    {'name': 'Tarea 1', 'percentage': 10, 'description': 'Primera tarea'},
+                    {'name': 'Tarea 2', 'percentage': 10, 'description': 'Segunda tarea'},
+                    {'name': 'Proyecto', 'percentage': 20, 'description': 'Proyecto semestral'},
+                    {'name': 'Participación', 'percentage': 15, 'description': 'Participación en clase'}
+                ],
+                'project': [
+                    {'name': 'Proyecto 1', 'percentage': 25, 'description': 'Primer proyecto'},
+                    {'name': 'Proyecto 2', 'percentage': 25, 'description': 'Segundo proyecto'},
+                    {'name': 'Proyecto Final', 'percentage': 30, 'description': 'Proyecto final'},
+                    {'name': 'Presentaciones', 'percentage': 20, 'description': 'Presentaciones de proyectos'}
+                ]
+            }
+            
+            # Crear actividades según la plantilla seleccionada
+            if selected_template in templates:
+                for activity_data in templates[selected_template]:
+                    CustomEvaluationActivity.objects.create(
+                        plan=custom_plan,
+                        name=activity_data['name'],
+                        description=activity_data['description'],
+                        percentage=activity_data['percentage']
+                    )
+                
+                messages.success(request, f'Plan "{plan_name}" creado exitosamente con plantilla {selected_template.title()}.')
+            else:
+                messages.success(request, f'Plan "{plan_name}" creado exitosamente.')
+        else:
+            messages.success(request, f'Plan "{plan_name}" creado exitosamente.')
+        
+        # Registrar actividad
         StudentActivity.log_activity(
             student_id=str(student_profile.id),
             activity_type='custom_plan_created',
-            details={'group_id': group_id, 'plan_name': plan_name}
+            details={
+                'group_id': group_id, 
+                'plan_name': plan_name,
+                'template_used': selected_template if selected_template else 'none'
+            }
         )
         
-        messages.success(request, f'Plan "{plan_name}" creado exitosamente.')
-        return redirect('edit_custom_plan', plan_id=custom_plan.id)
+        return redirect('student_portal:edit_custom_plan', plan_id=custom_plan.id)
     
     context = {
         'group': group,
@@ -261,6 +321,27 @@ def edit_custom_plan(request, plan_id):
             
             messages.success(request, 'Actividad agregada exitosamente.')
         
+        elif 'edit_activity' in request.POST:
+            # Editar actividad existente
+            activity_id = request.POST.get('activity_id')
+            activity = get_object_or_404(CustomEvaluationActivity, id=activity_id, plan=custom_plan)
+            
+            activity.name = request.POST.get('activity_name')
+            activity.description = request.POST.get('activity_description', '')
+            activity.percentage = int(request.POST.get('activity_percentage'))
+            activity.save()
+            
+            messages.success(request, 'Actividad actualizada exitosamente.')
+        
+        elif 'delete_activity' in request.POST:
+            # Eliminar actividad
+            activity_id = request.POST.get('activity_id')
+            activity = get_object_or_404(CustomEvaluationActivity, id=activity_id, plan=custom_plan)
+            activity_name = activity.name
+            activity.delete()
+            
+            messages.success(request, f'Actividad "{activity_name}" eliminada exitosamente.')
+        
         elif 'update_plan' in request.POST:
             # Actualizar información del plan
             custom_plan.name = request.POST.get('plan_name')
@@ -269,15 +350,17 @@ def edit_custom_plan(request, plan_id):
             
             messages.success(request, 'Plan actualizado exitosamente.')
         
-        return redirect('edit_custom_plan', plan_id=plan_id)
+        return redirect('student_portal:edit_custom_plan', plan_id=plan_id)
     
     activities = custom_plan.activities.all()
     total_percentage = sum(activity.percentage for activity in activities)
+    remaining_percentage = 100 - total_percentage
     
     context = {
         'custom_plan': custom_plan,
         'activities': activities,
         'total_percentage': total_percentage,
+        'remaining_percentage': remaining_percentage,
         'is_valid': total_percentage == 100,
     }
     
@@ -1436,8 +1519,20 @@ def add_course(request, group_id):
     
     # Verifica si ya está inscrito
     if StudentEnrollment.objects.filter(student=student_profile, group=group).exists():
-        messages.info(request, "Ya estás inscrito en este curso.")
+        messages.info(request, f"Ya estás inscrito en {group.subject.code} - {group.subject.name}.")
     else:
         StudentEnrollment.objects.create(student=student_profile, group=group)
-        messages.success(request, "Te has inscrito exitosamente en el curso.")
-    return redirect('student_portal:courses_dashboard')
+        messages.success(request, f"Te has inscrito exitosamente en {group.subject.code} - {group.subject.name}. ¡Ahora puedes gestionar tus notas!")
+        
+        # Registrar actividad
+        StudentActivity.log_activity(
+            student_id=str(student_profile.id),
+            activity_type='course_enrolled',
+            details={
+                'group_id': group_id,
+                'subject_code': group.subject.code,
+                'subject_name': group.subject.name
+            }
+        )
+    
+    return redirect('student_portal:evaluation_plans')
