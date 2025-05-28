@@ -204,6 +204,31 @@ body {
     margin-left: auto;
 }
 
+/* Estilos para el botón de logout */
+.nav-link-button {
+    background: none !important;
+    border: none !important;
+    width: 100% !important;
+    text-align: left !important;
+    padding: 0.75rem 1.25rem !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    cursor: pointer !important;
+    transition: var(--transition) !important;
+    font-weight: 500 !important;
+    border-left: 3px solid transparent !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+    font-family: inherit !important;
+    font-size: inherit !important;
+}
+
+.nav-link-button:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+    border-left-color: var(--accent-color) !important;
+}
+
 /* ==========================================================================
    HEADER
    ========================================================================== */

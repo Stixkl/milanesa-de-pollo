@@ -3,49 +3,50 @@
 {% block title %}Inicio{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <h1>Bienvenido a Trackademic</h1>
-        {% if user.is_authenticated %}
-            <div class="card">
+<div class="container-fluid min-vh-100 d-flex flex-column justify-content-center align-items-center" style="padding-top: 0;">
+    <div class="row justify-content-center w-100">
+        <div class="col-12 text-center mb-4">
+            <h1 class="display-2 fw-bold" style="letter-spacing: -2px;">Trackademic</h1>
+            <p class="lead">Tu plataforma profesional de gestión académica</p>
+        </div>
+    </div>
+    <div class="row justify-content-center w-100">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">Panel de Control</h5>
-                    <div class="row mt-3">
+                    <h4 class="card-title text-center mb-4">Panel de Control</h4>
+                    <div class="row g-4 justify-content-center">
                         <div class="col-md-4">
-                            <div class="card">
-                                <div class="card-body">
+                            <div class="card h-100 border-primary">
+                                <div class="card-body d-flex flex-column justify-content-between align-items-center text-center">
                                     <h6 class="card-subtitle mb-2 text-muted">Mis Cursos</h6>
                                     <p class="card-text">Administra tus cursos y calificaciones.</p>
-                                    <a href="{% url 'student_portal:courses_dashboard' %}" class="btn btn-primary">Ver Cursos</a>
+                                    <a href="{% url 'student_portal:courses_dashboard' %}" class="btn btn-primary mt-auto w-100">Ver Cursos</a>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="card">
-                                <div class="card-body">
+                            <div class="card h-100 border-success">
+                                <div class="card-body d-flex flex-column justify-content-between align-items-center text-center">
                                     <h6 class="card-subtitle mb-2 text-muted">Plan de Evaluación</h6>
                                     <p class="card-text">Gestiona los planes de evaluación.</p>
-                                    <a href="{% url 'student_portal:evaluation_plans' %}" class="btn btn-primary">Ver Planes</a>
+                                    <a href="{% url 'student_portal:evaluation_plans' %}" class="btn btn-success mt-auto w-100">Ver Planes</a>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="card">
-                                <div class="card-body">
+                            <div class="card h-100 border-info">
+                                <div class="card-body d-flex flex-column justify-content-between align-items-center text-center">
                                     <h6 class="card-subtitle mb-2 text-muted">Estadísticas</h6>
                                     <p class="card-text">Visualiza tu progreso académico.</p>
-                                    <a href="{% url 'student_portal:reports_dashboard' %}" class="btn btn-primary">Ver Estadísticas</a>
+                                    <a href="{% url 'student_portal:reports_dashboard' %}" class="btn btn-info mt-auto w-100 text-white">Ver Estadísticas</a>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        {% else %}
-            <p>Por favor, inicia sesión para acceder a todas las funcionalidades.</p>
-            <a href="{% url 'login' %}" class="btn btn-primary">Iniciar Sesión</a>
-            <a href="{% url 'register' %}" class="btn btn-secondary">Registrarse</a>
-        {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}

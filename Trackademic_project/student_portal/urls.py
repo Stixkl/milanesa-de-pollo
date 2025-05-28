@@ -11,7 +11,6 @@ urlpatterns = [
     path('planes/', views.evaluation_plans, name='evaluation_plans'),
     path('planes/crear/<int:group_id>/', views.create_custom_plan, name='create_custom_plan'),
     path('planes/editar/<int:plan_id>/', views.edit_custom_plan, name='edit_custom_plan'),
-    path('meta/<int:plan_id>/', views.set_grade_goal, name='set_grade_goal'),
     path('informes/', views.reports_dashboard, name='reports_dashboard'),
     path('semestre/<int:semester_id>/', views.semester_summary, name='semester_summary'),
     path('colaborativo/', views.collaborative_dashboard, name='collaborative_dashboard'),
@@ -32,4 +31,5 @@ urlpatterns = [
     # Dashboard administrativo para profesores
     path('admin/estadisticas/', views.admin_stats_dashboard, name='admin_stats_dashboard'),
     path('admin/grupo/<int:group_id>/analytics/', views.admin_group_analytics, name='admin_group_analytics'),
+    path('agregar_curso/<int:group_id>/', views.add_course, name='add_course'),
 ] 

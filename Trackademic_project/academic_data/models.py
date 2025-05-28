@@ -112,7 +112,7 @@ class Subject(models.Model):
 
 class Group(models.Model):
     number = models.IntegerField()
-    semester = models.CharField(max_length=6)
+    semester = models.CharField(max_length=20)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='groups')
     professor = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='teaching_groups')
 

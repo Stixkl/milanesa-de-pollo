@@ -34,7 +34,7 @@ class MongoDBClient:
     
     def insert_document(self, collection_name, document):
         collection = self.get_collection(collection_name)
-        if collection:
+        if collection is not None:
             try:
                 result = collection.insert_one(document)
                 return result.inserted_id
@@ -44,7 +44,7 @@ class MongoDBClient:
     
     def find_documents(self, collection_name, query=None, projection=None):
         collection = self.get_collection(collection_name)
-        if collection:
+        if collection is not None:
             try:
                 return list(collection.find(query or {}, projection or {}))
             except Exception as e:
@@ -53,7 +53,7 @@ class MongoDBClient:
     
     def update_document(self, collection_name, query, update):
         collection = self.get_collection(collection_name)
-        if collection:
+        if collection is not None:
             try:
                 result = collection.update_one(query, {'$set': update})
                 return result.modified_count
@@ -63,7 +63,7 @@ class MongoDBClient:
     
     def delete_document(self, collection_name, query):
         collection = self.get_collection(collection_name)
-        if collection:
+        if collection is not None:
             try:
                 result = collection.delete_one(query)
                 return result.deleted_count

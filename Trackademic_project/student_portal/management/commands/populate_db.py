@@ -390,17 +390,6 @@ class Command(BaseCommand):
                             ])
                         }
                     )
-        
-        # Crear metas académicas para algunos estudiantes
-        for student in self.students[:2]:
-            for plan in plans[:2]:
-                GradeEstimation.objects.get_or_create(
-                    student=student,
-                    evaluation_plan=plan,
-                    defaults={
-                        'target_grade': Decimal(str(random.uniform(3.5, 4.5)))
-                    }
-                )
 
     def create_nosql_data(self):
         """Crear datos de ejemplo en MongoDB"""

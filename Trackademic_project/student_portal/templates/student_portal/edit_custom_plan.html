@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Editar Plan: {{ custom_plan.name }}</h2>
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="plan_name" class="form-label">Nombre del Plan</label>
+      <input type="text" class="form-control" id="plan_name" name="plan_name" value="{{ custom_plan.name }}" required>
+    </div>
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" id="is_public" name="is_public" {% if custom_plan.is_public %}checked{% endif %}>
+      <label class="form-check-label" for="is_public">Hacer público este plan</label>
+    </div>
+    <button type="submit" name="update_plan" class="btn btn-success">Actualizar Plan</button>
+    <a href="{% url 'evaluation_plans' %}" class="btn btn-secondary">Volver</a>
+  </form>
+  <hr>
+  <h4>Actividades del Plan</h4>
+  <form method="post" class="row g-3">
+    {% csrf_token %}
+    <input type="hidden" name="add_activity" value="1">
+    <div class="col-md-4">
+      <input type="text" class="form-control" name="activity_name" placeholder="Nombre de la actividad" required>
+    </div>
+    <div class="col-md-3">
+      <input type="number" class="form-control" name="activity_percentage" placeholder="%" min="1" max="100" required>
+    </div>
+    <div class="col-md-3">
+      <input type="date" class="form-control" name="due_date">
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary">Agregar</button>
+    </div>
+  </form>
+  <table class="table mt-3">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>%</th>
+        <th>Fecha de entrega</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for activity in activities %}
+      <tr>
+        <td>{{ activity.name }}</td>
+        <td>{{ activity.percentage }}</td>
+        <td>{{ activity.due_date|date:'d/m/Y' }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3">No hay actividades aún.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="alert {% if is_valid %}alert-success{% else %}alert-danger{% endif %}">
+    Total porcentaje: <strong>{{ total_percentage }}%</strong> {% if not is_valid %}(¡Debe sumar 100%!) {% endif %}
+  </div>
+</div>
+{% endblock %} 

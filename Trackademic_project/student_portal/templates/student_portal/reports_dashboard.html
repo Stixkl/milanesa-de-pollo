@@ -70,12 +70,12 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h3 class="mb-0">{{ goals_stats.success_rate|floatformat:0|default:"0" }}%</h3>
-                            <span class="small">Tasa de Éxito en Metas</span>
-                            <br><small class="opacity-75">{{ goals_stats.achievable_goals }}/{{ goals_stats.total_goals }} alcanzables</small>
+                            <h3 class="mb-0">{{ subject_stats.below_3 }}</h3>
+                            <span class="small">Materias en Riesgo</span>
+                            <br><small class="opacity-75">De {{ subject_stats.total_subjects }} total</small>
                         </div>
                         <div class="align-self-center">
-                            <i class="fas fa-target fa-2x opacity-75"></i>
+                            <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
                         </div>
                     </div>
                 </div>

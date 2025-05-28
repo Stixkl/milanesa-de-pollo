@@ -11,7 +11,7 @@ from datetime import datetime
 
 from .models import (
     Semester, StudentEnrollment, EvaluationPlan, EvaluationActivity,
-    StudentGrade, PlanComment, GradeEstimation, SemesterSummary,
+    StudentGrade, PlanComment, SemesterSummary,
     CustomEvaluationPlan, CustomEvaluationActivity, CustomGrade
 )
 from academic_data.models import Group, Subject, StudentProfile
@@ -76,8 +76,8 @@ def course_detail(request, group_id):
     group = get_object_or_404(Group, id=group_id)
     student_profile = request.user.student_profile
     
-    # Verificar que el estudiante esté inscrito
-    enrollment = get_object_or_404(StudentEnrollment, student=student_profile, group=group)
+    # Intentar obtener la inscripción, pero no lanzar error si no existe
+    enrollment = StudentEnrollment.objects.filter(student=student_profile, group=group).first()
     
     # Obtener plan de evaluación oficial
     official_plan = EvaluationPlan.objects.filter(group=group).first()
@@ -96,32 +96,30 @@ def course_detail(request, group_id):
     if active_plan:
         if plan_type == 'official':
             activities = active_plan.activities.all()
-            grades = StudentGrade.objects.filter(
-                student=student_profile,
-                activity__in=activities
-            )
-            grade_dict = {grade.activity_id: grade for grade in grades}
+            if enrollment:
+                grades = StudentGrade.objects.filter(
+                    student=student_profile,
+                    activity__in=activities
+                )
+                grade_dict = {grade.activity_id: grade for grade in grades}
+            else:
+                grade_dict = {}
         else:
             activities = active_plan.activities.all()
-            grades = CustomGrade.objects.filter(
-                student=student_profile,
-                activity__in=activities
-            )
-            grade_dict = {grade.activity_id: grade for grade in grades}
+            if enrollment:
+                grades = CustomGrade.objects.filter(
+                    student=student_profile,
+                    activity__in=activities
+                )
+                grade_dict = {grade.activity_id: grade for grade in grades}
+            else:
+                grade_dict = {}
     else:
         activities = []
         grade_dict = {}
     
-    # Calcular nota actual
-    current_grade = enrollment.current_grade() if official_plan else Decimal('0.00')
-    
-    # Obtener estimación de nota objetivo
-    estimation = None
-    if official_plan:
-        estimation = GradeEstimation.objects.filter(
-            student=student_profile,
-            evaluation_plan=official_plan
-        ).first()
+    # Calcular nota actual solo si está inscrito
+    current_grade = enrollment.current_grade() if (enrollment and official_plan) else Decimal('0.00')
     
     context = {
         'group': group,
@@ -133,7 +131,6 @@ def course_detail(request, group_id):
         'activities': activities,
         'grade_dict': grade_dict,
         'current_grade': current_grade,
-        'estimation': estimation,
     }
     
     return render(request, 'student_portal/course_detail.html', context)
@@ -262,7 +259,10 @@ def manage_grades(request, group_id):
     student_profile = request.user.student_profile
     
     # Verificar inscripción
-    enrollment = get_object_or_404(StudentEnrollment, student=student_profile, group=group)
+    enrollment = StudentEnrollment.objects.filter(student=student_profile, group=group).first()
+    if not enrollment:
+        messages.error(request, 'Debes inscribirte en el curso para gestionar notas.')
+        return redirect('student_portal:course_detail', group_id=group_id)
     
     # Obtener plan activo
     official_plan = EvaluationPlan.objects.filter(group=group).first()
@@ -447,34 +447,6 @@ def reports_dashboard(request):
         if subject_stats['below_3'] > 0:
             subject_stats['highest_risk_area'] = subject_performance[0]['subject'].program.name
     
-    # Informe 3: Progreso hacia metas académicas con análisis predictivo
-    estimations = GradeEstimation.objects.filter(
-        student=student_profile
-    ).select_related('evaluation_plan__group__subject')
-    
-    goals_progress = []
-    goals_stats = {
-        'total_goals': estimations.count(),
-        'achievable_goals': 0,
-        'at_risk_goals': 0,
-        'success_rate': 0
-    }
-    
-    for estimation in estimations:
-        result = estimation.get_required_grades()
-        goals_progress.append({
-            'estimation': estimation,
-            'result': result,
-        })
-        
-        if result.get('is_possible', False):
-            goals_stats['achievable_goals'] += 1
-        else:
-            goals_stats['at_risk_goals'] += 1
-    
-    if goals_stats['total_goals'] > 0:
-        goals_stats['success_rate'] = (goals_stats['achievable_goals'] / goals_stats['total_goals']) * 100
-    
     # Nuevas métricas avanzadas
     
     # 4. Análisis de productividad y patrones de estudio
@@ -545,22 +517,7 @@ def reports_dashboard(request):
         # Datos originales
         'semester_summaries': semester_summaries,
         'subject_performance': subject_performance[:10],
-        'goals_progress': goals_progress,
-        
-        # Datos para gráficos (JSON)
-        'chart_data': {
-            'labels': chart_labels,
-            'averages': chart_averages,
-            'credits': chart_credits,
-            'efficiency': chart_efficiency
-        },
-        
-        # Estadísticas avanzadas
         'subject_stats': subject_stats,
-        'goals_stats': goals_stats,
-        'activity_summary': activity_summary,
-        'collaboration_stats': collaboration_stats,
-        'predictions': predictions,
         'comparative_stats': comparative_stats,
         
         # Filtros
@@ -573,40 +530,6 @@ def reports_dashboard(request):
     }
     
     return render(request, 'student_portal/reports_dashboard.html', context)
-
-
-@login_required
-@require_http_methods(["POST"])
-def set_grade_goal(request, plan_id):
-    """Establecer meta de calificación para un plan"""
-    plan = get_object_or_404(EvaluationPlan, id=plan_id)
-    student_profile = request.user.student_profile
-    
-    try:
-        target_grade = Decimal(request.POST.get('target_grade'))
-        
-        estimation, created = GradeEstimation.objects.update_or_create(
-            student=student_profile,
-            evaluation_plan=plan,
-            defaults={'target_grade': target_grade}
-        )
-        
-        # Registrar actividad
-        StudentActivity.log_activity(
-            student_id=str(student_profile.id),
-            activity_type='grade_goal_set',
-            details={
-                'plan_id': plan_id,
-                'target_grade': float(target_grade)
-            }
-        )
-        
-        messages.success(request, f'Meta de {target_grade} establecida para {plan.group.subject.name}')
-        
-    except (ValueError, TypeError):
-        messages.error(request, 'Por favor ingresa una meta válida.')
-    
-    return redirect('student_portal:course_detail', group_id=plan.group.id)
 
 
 @login_required
@@ -1041,11 +964,6 @@ def api_realtime_stats(request):
         if enrollment.current_grade() < 3.0:
             subjects_at_risk += 1
     
-    # Progreso de metas
-    goals_progress = GradeEstimation.objects.filter(
-        student=student_profile
-    ).count()
-    
     # Engagement score basado en actividad
     engagement_score = min(100, recent_activity['total_activities'] * 10)
     
@@ -1054,7 +972,6 @@ def api_realtime_stats(request):
         'current_average': current_average,
         'subjects_at_risk': subjects_at_risk,
         'total_enrollments': enrollments.count(),
-        'active_goals': goals_progress,
         'engagement_score': engagement_score,
         'recent_activity': recent_activity,
         'trend': 'stable'  # Se puede mejorar con cálculo real de tendencia
@@ -1147,17 +1064,30 @@ def api_predictions(request):
         )
     
     # Probabilidad de éxito en metas actuales
-    estimations = GradeEstimation.objects.filter(student=student_profile)
-    achievable_goals = 0
-    total_goals = estimations.count()
-    
-    for estimation in estimations:
-        result = estimation.get_required_grades()
-        if result.get('is_possible', False):
-            achievable_goals += 1
-    
-    if total_goals > 0:
-        predictions['success_probability']['current_goals'] = (achievable_goals / total_goals) * 100
+    if semester_summaries.count() >= 2:
+        # Calcular tendencia usando regresión lineal simple
+        grades = [float(s.average_grade) for s in reversed(semester_summaries)]
+        n = len(grades)
+        
+        if n >= 2:
+            # Proyección lineal simple
+            x_vals = list(range(n))
+            sum_x = sum(x_vals)
+            sum_y = sum(grades)
+            sum_xy = sum(x * y for x, y in zip(x_vals, grades))
+            sum_x2 = sum(x * x for x in x_vals)
+            
+            if n * sum_x2 - sum_x * sum_x != 0:
+                slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
+                intercept = (sum_y - slope * sum_x) / n
+                
+                # Proyección para el siguiente semestre
+                next_projection = slope * n + intercept
+                predictions['success_probability']['semester_target'] = max(0, min(5, next_projection))
+                
+                # Probabilidad de éxito basada en tendencia
+                if next_projection >= 3.0:
+                    predictions['success_probability']['current_goals'] = min(100, (next_projection / 5.0) * 100)
     
     return JsonResponse(predictions)
 
@@ -1203,17 +1133,22 @@ def api_alerts(request):
                 })
     
     # Alertas de metas en riesgo
-    estimations = GradeEstimation.objects.filter(student=student_profile)
-    for estimation in estimations:
-        result = estimation.get_required_grades()
-        if not result.get('is_possible', True):
-            alerts['warning'].append({
-                'type': 'goal_unreachable',
-                'message': f"Meta inalcanzable en {estimation.evaluation_plan.group.subject.name}",
-                'action': "Considera ajustar tu meta objetivo",
-                'target': float(estimation.target_grade),
-                'current': float(result.get('current_grade', 0))
-            })
+    if active_semester:
+        try:
+            summary = SemesterSummary.objects.get(
+                student=student_profile,
+                semester=active_semester
+            )
+            if summary.average_grade < 3.0:
+                alerts['warning'].append({
+                    'type': 'goal_unreachable',
+                    'message': f"Meta inalcanzable en {summary.semester.name}",
+                    'action': "Considera ajustar tu meta objetivo",
+                    'target': 3.0,
+                    'current': float(summary.average_grade)
+                })
+        except SemesterSummary.DoesNotExist:
+            pass
     
     # Alertas de actividad baja
     activity_summary = StudentActivity.get_student_activity_summary(student_profile.id, days=7)
@@ -1460,3 +1395,18 @@ def admin_group_analytics(request, group_id):
     }
     
     return render(request, 'student_portal/admin_group_analytics.html', context)
+
+
+@login_required
+def add_course(request, group_id):
+    student_profile = request.user.student_profile
+    group = get_object_or_404(Group, id=group_id)
+    # Obtener la instancia de Semester
+    semester = get_object_or_404(Semester, name=group.semester)
+    # Verifica si ya está inscrito
+    if StudentEnrollment.objects.filter(student=student_profile, group=group).exists():
+        messages.info(request, "Ya estás inscrito en este curso.")
+    else:
+        StudentEnrollment.objects.create(student=student_profile, group=group, semester=semester)
+        messages.success(request, "Te has inscrito exitosamente en el curso.")
+    return redirect('student_portal:courses_dashboard')
