@@ -1401,8 +1401,8 @@ def admin_group_analytics(request, group_id):
 def add_course(request, group_id):
     student_profile = request.user.student_profile
     group = get_object_or_404(Group, id=group_id)
-    # Obtener la instancia de Semester
-    semester = get_object_or_404(Semester, name=group.semester)
+    # Obtener la instancia de Semester directamente
+    semester = group.semester
     # Verifica si ya está inscrito
     if StudentEnrollment.objects.filter(student=student_profile, group=group).exists():
         messages.info(request, "Ya estás inscrito en este curso.")

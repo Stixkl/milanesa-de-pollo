@@ -112,7 +112,7 @@ class Subject(models.Model):
 
 class Group(models.Model):
     number = models.IntegerField()
-    semester = models.CharField(max_length=20)
+    semester = models.ForeignKey('Semester', on_delete=models.CASCADE, related_name='groups', null=True, blank=True)  # Renombrado de semester_fk
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='groups')
     professor = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='teaching_groups')
 
@@ -120,7 +120,12 @@ class Group(models.Model):
         unique_together = ('number', 'subject', 'semester')
 
     def __str__(self):
-        return f"{self.subject.code} - Group {self.number} ({self.semester})"
+        return f"{self.subject.code} - Group {self.number} ({self.semester.name})"
+
+    @property
+    def semester_name(self):
+        """Obtener el nombre del semestre"""
+        return self.semester.name
 
 class StudentProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')
@@ -132,3 +137,16 @@ class StudentProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name} ({self.student_id})"
+
+class Semester(models.Model):
+    name = models.CharField(max_length=20, unique=True)  # Ej: '2023-2', '2024-1'
+    start_date = models.DateField()
+    end_date = models.DateField()
+    is_active = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['-name']  # Más recientes primero
