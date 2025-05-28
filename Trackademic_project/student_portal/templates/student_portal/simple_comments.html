@@ -1,0 +1,381 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Comentarios - {{ plan.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .comment-section {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .comment-form {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+        border-left: 4px solid #007bff;
+    }
+    
+    .comment-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 3px solid #28a745;
+        transition: transform 0.2s;
+    }
+    
+    .comment-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .comment-author {
+        font-weight: bold;
+        color: #222;
+        font-size: 1.2em;
+        margin-bottom: 5px;
+    }
+    
+    .comment-date {
+        color: #6c757d;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+    }
+    
+    .comment-content {
+        color: #2c3e50;
+        line-height: 1.6;
+        font-size: 1em;
+    }
+    
+    .plan-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    
+    .comment-stats {
+        background: #e9ecef;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    
+    .btn-comment {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: bold;
+        transition: all 0.3s;
+    }
+    
+    .btn-comment:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        color: white;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+    
+    .comment-textarea {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        transition: border-color 0.3s;
+    }
+    
+    .comment-textarea:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+    
+    .back-link {
+        color: #6c757d;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .back-link:hover {
+        color: #495057;
+        text-decoration: none;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 20px;
+        color: #6c757d;
+    }
+    
+    .comment-form h4,
+    .comment-form label,
+    .comment-stats h5 {
+        color: #222 !important;
+    }
+    .plan-header h1 {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="comment-section">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'student_portal:evaluation_plans' %}" class="back-link">
+                        <i class="fas fa-arrow-left me-1"></i>Planes de Evaluación
+                    </a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">Comentarios</li>
+            </ol>
+        </nav>
+
+        <!-- Plan Header -->
+        <div class="plan-header">
+            <h1 class="mb-2">{{ plan.name }}</h1>
+            <p class="mb-0 opacity-75">Comentarios y Discusión</p>
+        </div>
+
+        <!-- Comment Stats -->
+        <div class="comment-stats">
+            <h5 class="mb-0">
+                <i class="fas fa-comments me-2"></i>
+                {{ comment_count }} comentario{{ comment_count|pluralize }}
+            </h5>
+        </div>
+
+        <!-- Comment Form -->
+        <div class="comment-form">
+            <h4 class="mb-3">
+                <i class="fas fa-edit me-2"></i>
+                Agregar Comentario
+            </h4>
+            
+            <form id="commentForm" method="post" action="{% url 'student_portal:add_simple_comment' plan_id=plan.id plan_type=plan_type %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="content" class="form-label">Tu comentario:</label>
+                    <textarea 
+                        class="form-control comment-textarea" 
+                        name="content" 
+                        id="content" 
+                        rows="4" 
+                        placeholder="Escribe tu comentario aquí..."
+                        required></textarea>
+                </div>
+                
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-comment">
+                        <i class="fas fa-paper-plane me-2"></i>
+                        Publicar Comentario
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Comments List -->
+        <div id="commentsList">
+            {% if comments %}
+                {% for comment in comments %}
+                <div class="comment-card" data-comment-id="{{ comment.id }}">
+                    <div class="comment-author">
+                        <i class="fas fa-user-circle me-2"></i>
+                        {{ comment.user_name }}
+                    </div>
+                    <div class="comment-date">
+                        <i class="far fa-clock me-1"></i>
+                        {{ comment.created_at|date:"d/m/Y H:i" }}
+                    </div>
+                    <div class="comment-content">
+                        {{ comment.content|linebreaks }}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-comments"></i>
+                    <h4>No hay comentarios aún</h4>
+                    <p>¡Sé el primero en comentar sobre este plan de evaluación!</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="loadingIndicator" class="loading" style="display: none;">
+            <i class="fas fa-spinner fa-spin me-2"></i>
+            Cargando...
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const commentForm = document.getElementById('commentForm');
+    const commentsList = document.getElementById('commentsList');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    
+    // Handle form submission with AJAX
+    commentForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const content = formData.get('content').trim();
+        
+        if (!content) {
+            alert('Por favor, escribe un comentario antes de publicar.');
+            return;
+        }
+        
+        // Show loading
+        loadingIndicator.style.display = 'block';
+        
+        // Send AJAX request
+        fetch(this.action, {
+            method: 'POST',
+            body: JSON.stringify({
+                content: content
+            }),
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            loadingIndicator.style.display = 'none';
+            
+            if (data.success) {
+                // Clear form
+                document.getElementById('content').value = '';
+                
+                // Add new comment to the list
+                addCommentToList(data.comment);
+                
+                // Update comment count
+                updateCommentCount();
+                
+                // Show success message
+                showMessage('Comentario agregado exitosamente!', 'success');
+            } else {
+                showMessage(data.message || 'Error al agregar comentario', 'error');
+            }
+        })
+        .catch(error => {
+            loadingIndicator.style.display = 'none';
+            console.error('Error:', error);
+            showMessage('Error de conexión', 'error');
+        });
+    });
+    
+    function addCommentToList(comment) {
+        const commentsContainer = document.getElementById('commentsList');
+        
+        // Remove empty state if exists
+        const emptyState = commentsContainer.querySelector('.empty-state');
+        if (emptyState) {
+            emptyState.remove();
+        }
+        
+        // Create new comment element
+        const commentHtml = `
+            <div class="comment-card" data-comment-id="${comment.id || 'new'}">
+                <div class="comment-author">
+                    <i class="fas fa-user-circle me-2"></i>
+                    ${comment.user_name}
+                </div>
+                <div class="comment-date">
+                    <i class="far fa-clock me-1"></i>
+                    ${comment.created_at}
+                </div>
+                <div class="comment-content">
+                    ${comment.content.replace(/\n/g, '<br>')}
+                </div>
+            </div>
+        `;
+        
+        // Add to top of comments list
+        commentsContainer.insertAdjacentHTML('afterbegin', commentHtml);
+        
+        // Add animation
+        const newComment = commentsContainer.firstElementChild;
+        newComment.style.opacity = '0';
+        newComment.style.transform = 'translateY(-20px)';
+        
+        setTimeout(() => {
+            newComment.style.transition = 'all 0.3s ease';
+            newComment.style.opacity = '1';
+            newComment.style.transform = 'translateY(0)';
+        }, 100);
+    }
+    
+    function updateCommentCount() {
+        const statsElement = document.querySelector('.comment-stats h5');
+        const currentComments = document.querySelectorAll('.comment-card').length;
+        const pluralSuffix = currentComments !== 1 ? 's' : '';
+        
+        statsElement.innerHTML = `
+            <i class="fas fa-comments me-2"></i>
+            ${currentComments} comentario${pluralSuffix}
+        `;
+    }
+    
+    function showMessage(message, type) {
+        // Create toast-style notification
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible`;
+        toast.style.position = 'fixed';
+        toast.style.top = '20px';
+        toast.style.right = '20px';
+        toast.style.zIndex = '9999';
+        toast.style.minWidth = '300px';
+        
+        toast.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 5000);
+    }
+    
+    // Auto-resize textarea
+    const textarea = document.getElementById('content');
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+});
+</script>
+{% endblock %} 

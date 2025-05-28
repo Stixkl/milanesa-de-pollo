@@ -1,0 +1,720 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Comentarios - {{ plan.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .comment-card {
+        border-left: 4px solid #007bff;
+        transition: all 0.3s ease;
+    }
+    
+    .comment-card:hover {
+        border-left-color: #0056b3;
+        box-shadow: 0 4px 12px rgba(0,123,255,0.15);
+    }
+    
+    .comment-reply {
+        border-left: 3px solid #6c757d;
+        margin-left: 20px;
+        padding-left: 15px;
+    }
+    
+    .comment-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        font-size: 0.9rem;
+    }
+    
+    .like-btn {
+        border: none;
+        background: none;
+        color: #6c757d;
+        transition: color 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .like-btn:hover, .like-btn.liked {
+        color: #dc3545;
+    }
+    
+    .comment-form {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .comment-type-selector {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .comment-type-btn {
+        padding: 8px 16px;
+        border: 2px solid #dee2e6;
+        background: white;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.85rem;
+    }
+    
+    .comment-type-btn.active {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    
+    .comment-type-btn:hover {
+        border-color: #007bff;
+        color: #007bff;
+    }
+    
+    .rating-stars {
+        display: flex;
+        gap: 5px;
+        margin: 10px 0;
+    }
+    
+    .star {
+        font-size: 1.5rem;
+        color: #dee2e6;
+        cursor: pointer;
+        transition: color 0.3s ease;
+    }
+    
+    .star:hover, .star.active {
+        color: #ffc107;
+    }
+    
+    .comment-stats {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .filter-buttons {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .filter-btn {
+        padding: 8px 16px;
+        border: 1px solid #dee2e6;
+        background: white;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .filter-btn.active {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    
+    .reply-form {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 10px;
+        display: none;
+    }
+    
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    
+    .comment-meta {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-bottom: 8px;
+    }
+    
+    .comment-tags {
+        display: flex;
+        gap: 5px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .comment-tag {
+        background: #e9ecef;
+        color: #495057;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+    }
+    
+    .activity-reference {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin-bottom: 8px;
+        font-size: 0.85rem;
+    }
+    
+    .rating-display {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 5px;
+    }
+    
+    .rating-display .star {
+        font-size: 1rem;
+        cursor: default;
+    }
+    
+    .comment-content {
+        line-height: 1.6;
+        margin: 10px 0;
+    }
+    
+    @media (max-width: 768px) {
+        .comment-reply {
+            margin-left: 10px;
+            padding-left: 10px;
+        }
+        
+        .comment-type-selector {
+            flex-direction: column;
+        }
+        
+        .filter-buttons {
+            flex-direction: column;
+        }
+        
+        .comment-actions {
+            flex-wrap: wrap;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-1">
+                        <i class="fas fa-comments text-primary me-2"></i>
+                        Comentarios Colaborativos
+                    </h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'student_portal:evaluation_plans' %}">Planes de Evaluación</a>
+                            </li>
+                            <li class="breadcrumb-item active">{{ plan.name }}</li>
+                        </ol>
+                    </nav>
+                </div>
+                <a href="{% url 'student_portal:evaluation_plans' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Volver
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Plan Info -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="card-title mb-1">{{ plan.name }}</h5>
+                            <p class="text-muted mb-0">
+                                <i class="fas fa-book me-1"></i>
+                                {{ plan.group.subject.code }} - {{ plan.group.subject.name }}
+                                <span class="mx-2">|</span>
+                                <i class="fas fa-graduation-cap me-1"></i>
+                                {{ plan.group.subject.semester.name }}
+                                <span class="mx-2">|</span>
+                                <i class="fas fa-user me-1"></i>
+                                {{ plan.group.professor.user.get_full_name }}
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <span class="badge bg-{% if plan_type == 'official' %}primary{% else %}success{% endif %} fs-6">
+                                {% if plan_type == 'official' %}Plan Oficial{% else %}Plan Personalizado{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comment Stats -->
+    {% if comment_stats %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="comment-stats">
+                <div class="row text-center">
+                    <div class="col-6 col-md-3 mb-2 mb-md-0">
+                        <div class="h4 mb-0">{{ comment_stats.total_comments }}</div>
+                        <small>Total Comentarios</small>
+                    </div>
+                    <div class="col-6 col-md-3 mb-2 mb-md-0">
+                        <div class="h4 mb-0">{{ comment_stats.unique_contributors|length }}</div>
+                        <small>Participantes</small>
+                    </div>
+                    <div class="col-6 col-md-3 mb-2 mb-md-0">
+                        <div class="h4 mb-0">{{ comment_stats.suggestions }}</div>
+                        <small>Sugerencias</small>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="h4 mb-0">
+                            {% if comment_stats.average_rating %}
+                                {{ comment_stats.average_rating|floatformat:1 }}★
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                        <small>Calificación Promedio</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Comment Form -->
+        <div class="col-12 mb-4">
+            <div class="comment-form">
+                <h5 class="mb-3">
+                    <i class="fas fa-plus-circle text-primary me-2"></i>
+                    Agregar Comentario
+                </h5>
+                
+                <form method="post" action="{% url 'student_portal:add_plan_comment' plan_id=plan.id plan_type=plan_type %}" id="commentForm">
+                    {% csrf_token %}
+                    
+                    <!-- Comment Type Selector -->
+                    <div class="comment-type-selector">
+                        {% for value, label in comment_types %}
+                        <label class="comment-type-btn {% if forloop.first %}active{% endif %}">
+                            <input type="radio" name="comment_type" value="{{ value }}" 
+                                   {% if forloop.first %}checked{% endif %} style="display: none;">
+                            <i class="fas fa-{% if value == 'general' %}comment{% elif value == 'suggestion' %}lightbulb{% elif value == 'question' %}question-circle{% else %}star{% endif %} me-1"></i>
+                            {{ label }}
+                        </label>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Activity Reference (Optional) -->
+                    <div class="mb-3">
+                        <label for="activity_id" class="form-label">
+                            <i class="fas fa-tasks me-1"></i>
+                            Actividad Específica (Opcional)
+                        </label>
+                        <select class="form-select" name="activity_id" id="activity_id">
+                            <option value="">Comentario general del plan</option>
+                            {% for activity in activities %}
+                            <option value="{{ activity.id }}">{{ activity.name }} ({{ activity.percentage }}%)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Comment Content -->
+                    <div class="mb-3">
+                        <label for="content" class="form-label">
+                            <i class="fas fa-edit me-1"></i>
+                            Comentario *
+                        </label>
+                        <textarea class="form-control" name="content" id="content" rows="4" 
+                                  placeholder="Comparte tu experiencia, sugerencias o preguntas..." required></textarea>
+                    </div>
+
+                    <!-- Rating (Optional) -->
+                    <div class="mb-3" id="ratingSection">
+                        <label class="form-label">
+                            <i class="fas fa-star me-1"></i>
+                            Calificación (Opcional)
+                        </label>
+                        <div class="rating-stars" id="ratingStars">
+                            <span class="star" data-rating="1">★</span>
+                            <span class="star" data-rating="2">★</span>
+                            <span class="star" data-rating="3">★</span>
+                            <span class="star" data-rating="4">★</span>
+                            <span class="star" data-rating="5">★</span>
+                        </div>
+                        <input type="hidden" name="rating" id="ratingInput">
+                        <small class="text-muted">Evalúa este plan de evaluación</small>
+                    </div>
+
+                    <!-- Tags (Optional) -->
+                    <div class="mb-3">
+                        <label for="tags" class="form-label">
+                            <i class="fas fa-tags me-1"></i>
+                            Etiquetas (Opcional)
+                        </label>
+                        <input type="text" class="form-control" name="tags" id="tags" 
+                               placeholder="útil, difícil, bien estructurado (separadas por comas)">
+                        <small class="text-muted">Ayuda a otros estudiantes a encontrar comentarios relevantes</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane me-1"></i>
+                        Publicar Comentario
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="col-12 mb-4">
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">
+                    <i class="fas fa-list me-1"></i>
+                    Todos ({{ comments|length }})
+                </button>
+                <button class="filter-btn" data-filter="general">
+                    <i class="fas fa-comment me-1"></i>
+                    Generales
+                </button>
+                <button class="filter-btn" data-filter="suggestion">
+                    <i class="fas fa-lightbulb me-1"></i>
+                    Sugerencias
+                </button>
+                <button class="filter-btn" data-filter="question">
+                    <i class="fas fa-question-circle me-1"></i>
+                    Preguntas
+                </button>
+                <button class="filter-btn" data-filter="experience">
+                    <i class="fas fa-star me-1"></i>
+                    Experiencias
+                </button>
+            </div>
+        </div>
+
+        <!-- Comments List -->
+        <div class="col-12">
+            <div id="commentsList">
+                {% for comment in comments %}
+                <div class="card comment-card mb-3" data-comment-type="{{ comment.comment_type }}">
+                    <div class="card-body">
+                        <div class="d-flex">
+                            <!-- User Avatar -->
+                            <div class="me-3">
+                                <div class="user-avatar">
+                                    {{ comment.user_name|slice:":1"|upper }}
+                                </div>
+                            </div>
+                            
+                            <!-- Comment Content -->
+                            <div class="flex-grow-1">
+                                <!-- Comment Meta -->
+                                <div class="comment-meta">
+                                    <strong>{{ comment.user_name }}</strong>
+                                    <span class="mx-2">•</span>
+                                    <span title="{{ comment.created_at|date:'d/m/Y H:i' }}">
+                                        {{ comment.created_at|timesince }} atrás
+                                    </span>
+                                    <span class="mx-2">•</span>
+                                    <span class="badge bg-secondary">
+                                        {% if comment.comment_type == 'general' %}General
+                                        {% elif comment.comment_type == 'suggestion' %}Sugerencia
+                                        {% elif comment.comment_type == 'question' %}Pregunta
+                                        {% else %}Experiencia
+                                        {% endif %}
+                                    </span>
+                                </div>
+
+                                <!-- Activity Reference -->
+                                {% if comment.activity_id %}
+                                <div class="activity-reference">
+                                    <i class="fas fa-link me-1"></i>
+                                    Sobre: 
+                                    {% for activity in activities %}
+                                        {% if activity.id|stringformat:"s" == comment.activity_id %}
+                                            {{ activity.name }}
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+
+                                <!-- Comment Content -->
+                                <div class="comment-content">
+                                    {{ comment.content|linebreaks }}
+                                </div>
+
+                                <!-- Rating Display -->
+                                {% if comment.rating %}
+                                <div class="rating-display">
+                                    <span class="me-2">Calificación:</span>
+                                    {% for i in "12345"|make_list %}
+                                        <span class="star {% if forloop.counter <= comment.rating %}active{% endif %}">★</span>
+                                    {% endfor %}
+                                    <span class="ms-2 text-muted">({{ comment.rating }}/5)</span>
+                                </div>
+                                {% endif %}
+
+                                <!-- Tags -->
+                                {% if comment.tags %}
+                                <div class="comment-tags">
+                                    {% for tag in comment.tags %}
+                                    <span class="comment-tag">#{{ tag }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+
+                                <!-- Comment Actions -->
+                                <div class="comment-actions mt-2">
+                                    <button class="like-btn {% if user.student_profile.id|stringformat:'s' in comment.liked_by %}liked{% endif %}" 
+                                            data-comment-id="{{ comment._id }}">
+                                        <i class="fas fa-heart me-1"></i>
+                                        <span class="like-count">{{ comment.likes_count|default:0 }}</span>
+                                    </button>
+                                    
+                                    <button class="btn btn-link btn-sm p-0 reply-toggle" 
+                                            data-comment-id="{{ comment._id }}">
+                                        <i class="fas fa-reply me-1"></i>
+                                        Responder
+                                    </button>
+                                    
+                                    {% if comment.replies_count %}
+                                    <span class="text-muted">
+                                        <i class="fas fa-comments me-1"></i>
+                                        {{ comment.replies_count }} respuesta{{ comment.replies_count|pluralize }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Reply Form -->
+                                <div class="reply-form" id="replyForm_{{ comment._id }}">
+                                    <form method="post" action="{% url 'student_portal:reply_to_comment' comment_id=comment._id %}">
+                                        {% csrf_token %}
+                                        <div class="mb-2">
+                                            <textarea class="form-control" name="content" rows="2" 
+                                                      placeholder="Escribe tu respuesta..." required></textarea>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-paper-plane me-1"></i>
+                                                Responder
+                                            </button>
+                                            <button type="button" class="btn btn-secondary btn-sm reply-cancel">
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <!-- Replies -->
+                                <div class="replies mt-3" id="replies_{{ comment._id }}">
+                                    <!-- Las respuestas se cargarán aquí -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-5">
+                    <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No hay comentarios aún</h5>
+                    <p class="text-muted">¡Sé el primero en compartir tu experiencia!</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Comment type selector
+    const typeButtons = document.querySelectorAll('.comment-type-btn');
+    typeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            typeButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            this.querySelector('input[type="radio"]').checked = true;
+        });
+    });
+
+    // Rating stars
+    const ratingStars = document.querySelectorAll('.rating-stars .star');
+    const ratingInput = document.getElementById('ratingInput');
+    
+    ratingStars.forEach(star => {
+        star.addEventListener('click', function() {
+            const rating = parseInt(this.dataset.rating);
+            ratingInput.value = rating;
+            
+            ratingStars.forEach((s, index) => {
+                if (index < rating) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+        });
+        
+        star.addEventListener('mouseover', function() {
+            const rating = parseInt(this.dataset.rating);
+            ratingStars.forEach((s, index) => {
+                if (index < rating) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+        });
+    });
+
+    // Reset stars on mouse leave
+    document.querySelector('.rating-stars').addEventListener('mouseleave', function() {
+        const currentRating = parseInt(ratingInput.value) || 0;
+        ratingStars.forEach((s, index) => {
+            if (index < currentRating) {
+                s.classList.add('active');
+            } else {
+                s.classList.remove('active');
+            }
+        });
+    });
+
+    // Filter comments
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const comments = document.querySelectorAll('.comment-card');
+    
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            const filter = this.dataset.filter;
+            
+            comments.forEach(comment => {
+                if (filter === 'all') {
+                    comment.style.display = 'block';
+                } else {
+                    const commentType = comment.dataset.commentType;
+                    if (commentType === filter) {
+                        comment.style.display = 'block';
+                    } else {
+                        comment.style.display = 'none';
+                    }
+                }
+            });
+        });
+    });
+
+    // Like functionality
+    const likeButtons = document.querySelectorAll('.like-btn');
+    likeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const commentId = this.dataset.commentId;
+            
+            fetch(`{% url 'student_portal:toggle_comment_like' comment_id='PLACEHOLDER' %}`.replace('PLACEHOLDER', commentId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.querySelector('.like-count').textContent = data.likes_count;
+                    if (data.is_liked) {
+                        this.classList.add('liked');
+                    } else {
+                        this.classList.remove('liked');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    });
+
+    // Reply functionality
+    const replyToggles = document.querySelectorAll('.reply-toggle');
+    replyToggles.forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            const commentId = this.dataset.commentId;
+            const replyForm = document.getElementById(`replyForm_${commentId}`);
+            
+            if (replyForm.style.display === 'block') {
+                replyForm.style.display = 'none';
+            } else {
+                // Hide all other reply forms
+                document.querySelectorAll('.reply-form').forEach(form => {
+                    form.style.display = 'none';
+                });
+                replyForm.style.display = 'block';
+                replyForm.querySelector('textarea').focus();
+            }
+        });
+    });
+
+    // Cancel reply
+    const replyCancels = document.querySelectorAll('.reply-cancel');
+    replyCancels.forEach(cancel => {
+        cancel.addEventListener('click', function() {
+            this.closest('.reply-form').style.display = 'none';
+        });
+    });
+
+    // Handle reply form submission
+    const replyForms = document.querySelectorAll('.reply-form form');
+    replyForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload page to show new reply
+                    location.reload();
+                } else {
+                    alert('Error al enviar la respuesta: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al enviar la respuesta');
+            });
+        });
+    });
+});
+</script>
+{% endblock %} 

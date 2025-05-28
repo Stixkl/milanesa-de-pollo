@@ -145,17 +145,6 @@ class StudentGrade(models.Model):
         return f"{self.student} - {self.activity}: {self.grade}"
 
 
-class PlanComment(models.Model):
-    plan = models.ForeignKey(EvaluationPlan, on_delete=models.CASCADE, related_name='comments')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='plan_comments')
-    content = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"Comment by {self.user.username} on {self.plan}"
-
-
 class SemesterSummary(models.Model):
     """
     Nuevo modelo para almacenar el resumen de notas por semestre para cada estudiante.
@@ -278,3 +267,51 @@ class CustomGrade(models.Model):
     
     def __str__(self):
         return f"{self.student} - {self.activity}: {self.grade}"
+
+
+# Fallback models for when MongoDB is not available
+class PlanComment(models.Model):
+    """Fallback comment model using Django ORM"""
+    plan_id = models.IntegerField()
+    plan_type = models.CharField(max_length=20, choices=[('official', 'Official'), ('custom', 'Custom')])
+    student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE)
+    content = models.TextField()
+    comment_type = models.CharField(max_length=20, default='general', choices=[
+        ('general', 'General'),
+        ('suggestion', 'Suggestion'),
+        ('question', 'Question'),
+        ('experience', 'Experience'),
+        ('reply', 'Reply')
+    ])
+    activity_id = models.IntegerField(null=True, blank=True)
+    rating = models.IntegerField(null=True, blank=True, validators=[
+        MinValueValidator(1),
+        MaxValueValidator(5)
+    ])
+    tags = models.JSONField(default=list, blank=True)
+    parent_comment = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
+    likes_count = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    @property
+    def user_name(self):
+        return f"{self.student.user.first_name} {self.student.user.last_name}"
+    
+    @property
+    def replies_count(self):
+        return self.plancomment_set.filter(is_active=True).count()
+
+
+class CommentLike(models.Model):
+    """Model to track who liked which comments"""
+    comment = models.ForeignKey(PlanComment, on_delete=models.CASCADE)
+    student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['comment', 'student']

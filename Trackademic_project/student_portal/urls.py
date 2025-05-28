@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import simple_comment_views
 
 app_name = 'student_portal'
 
@@ -14,6 +15,14 @@ urlpatterns = [
     path('informes/', views.reports_dashboard, name='reports_dashboard'),
     path('semestre/<int:semester_id>/', views.semester_summary, name='semester_summary'),
     path('colaborativo/', views.collaborative_dashboard, name='collaborative_dashboard'),
+    
+    # Rutas de comentarios simplificados (nuevas)
+    path('plan/<int:plan_id>/<str:plan_type>/comentarios-simple/', simple_comment_views.simple_plan_comments, name='simple_plan_comments'),
+    path('plan/<int:plan_id>/<str:plan_type>/comentar-simple/', simple_comment_views.add_simple_comment, name='add_simple_comment'),
+    path('comentario/<str:comment_id>/eliminar-simple/', simple_comment_views.delete_simple_comment, name='delete_simple_comment'),
+    path('api/plan/<int:plan_id>/<str:plan_type>/comentarios/', simple_comment_views.api_get_comments, name='api_get_comments'),
+    
+    # Rutas de comentarios originales (mantenidas por compatibilidad)
     path('plan/<int:plan_id>/<str:plan_type>/comentarios/', views.plan_comments, name='plan_comments'),
     path('plan/<int:plan_id>/<str:plan_type>/comentar/', views.add_plan_comment, name='add_plan_comment'),
     path('plan/<int:plan_id>/<str:plan_type>/actividad/<int:activity_id>/comentarios/', views.activity_comments, name='activity_comments'),

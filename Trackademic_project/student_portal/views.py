@@ -12,10 +12,74 @@ from datetime import datetime
 from .models import (
     Semester, StudentEnrollment, EvaluationPlan, EvaluationActivity,
     StudentGrade, PlanComment, SemesterSummary,
-    CustomEvaluationPlan, CustomEvaluationActivity, CustomGrade
+    CustomEvaluationPlan, CustomEvaluationActivity, CustomGrade, CommentLike
 )
 from academic_data.models import Group, Subject, StudentProfile, Program
-from nosql_utils.models import StudentActivity, UserPreference, CollaborativeComment, PlanAnalytics
+
+# Try to import MongoDB models, fallback to Django ORM if not available
+try:
+    from nosql_utils.models import StudentActivity, UserPreference, CollaborativeComment, PlanAnalytics
+    MONGODB_AVAILABLE = True
+except ImportError:
+    MONGODB_AVAILABLE = False
+    # Create mock classes for when MongoDB is not available
+    class StudentActivity:
+        @staticmethod
+        def log_activity(student_id, activity_type, details=None):
+            pass
+        
+        @staticmethod
+        def get_student_activity_summary(student_id, days=30):
+            return {
+                'total_activities': 0,
+                'dashboard_visits': 0,
+                'grades_updated': 0,
+                'plans_created': 0,
+                'comments_made': 0,
+                'goals_set': 0
+            }
+    
+    class CollaborativeComment:
+        @staticmethod
+        def create_comment(*args, **kwargs):
+            return None
+        
+        @staticmethod
+        def get_comments_for_plan(plan_id, plan_type, include_replies=True):
+            return []
+        
+        @staticmethod
+        def get_comments_for_activity(plan_id, plan_type, activity_id):
+            return []
+        
+        @staticmethod
+        def toggle_like(comment_id, user_id):
+            return False
+        
+        @staticmethod
+        def get_comment_stats(plan_id, plan_type):
+            return {
+                'total_comments': 0,
+                'general_comments': 0,
+                'suggestions': 0,
+                'questions': 0,
+                'experiences': 0,
+                'average_rating': 0,
+                'unique_contributors': 0
+            }
+    
+    class PlanAnalytics:
+        @staticmethod
+        def record_plan_view(*args, **kwargs):
+            pass
+        
+        @staticmethod
+        def record_plan_interaction(*args, **kwargs):
+            pass
+        
+        @staticmethod
+        def get_plan_popularity(plan_type='official', limit=10):
+            return []
 
 @login_required
 def courses_dashboard(request):
@@ -176,7 +240,7 @@ def evaluation_plans(request):
     ).values_list('group_id', flat=True)
     
     available_groups = groups_query.exclude(id__in=groups_with_official_plans)
-
+    
     custom_plans = CustomEvaluationPlan.objects.filter(
         student=student_profile,
         group__in=groups_query  # Usar groups_query completo para planes personalizados
@@ -743,7 +807,177 @@ def api_course_progress(request, group_id):
     })
 
 
-# Funciones de Comentarios Colaborativos usando MongoDB
+# Comment system with fallback
+class CommentManager:
+    """Manager to handle comments with MongoDB/Django ORM fallback"""
+    
+    @staticmethod
+    def create_comment(plan_id, plan_type, student, content, comment_type='general', 
+                      activity_id=None, rating=None, tags=None, parent_comment_id=None):
+        """Create a comment using available backend"""
+        if MONGODB_AVAILABLE:
+            try:
+                return CollaborativeComment.create_comment(
+                    plan_id=plan_id,
+                    plan_type=plan_type,
+                    user_id=student.id,
+                    user_name=f"{student.user.first_name} {student.user.last_name}",
+                    content=content,
+                    comment_type=comment_type,
+                    activity_id=activity_id,
+                    rating=rating,
+                    tags=tags if isinstance(tags, list) else tags.split(',') if tags else None,
+                    parent_comment_id=parent_comment_id
+                )
+            except Exception:
+                pass  # Fall through to Django ORM
+        
+        # Django ORM fallback
+        parent_comment = None
+        if parent_comment_id:
+            try:
+                parent_comment = PlanComment.objects.get(id=parent_comment_id)
+            except PlanComment.DoesNotExist:
+                pass
+        
+        comment = PlanComment.objects.create(
+            plan_id=plan_id,
+            plan_type=plan_type,
+            student=student,
+            content=content,
+            comment_type=comment_type,
+            activity_id=activity_id,
+            rating=rating,
+            tags=tags.split(',') if isinstance(tags, str) else tags or [],
+            parent_comment=parent_comment
+        )
+        return comment.id
+    
+    @staticmethod
+    def get_comments_for_plan(plan_id, plan_type, include_replies=True):
+        """Get comments using available backend"""
+        if MONGODB_AVAILABLE:
+            try:
+                return CollaborativeComment.get_comments_for_plan(plan_id, plan_type, include_replies)
+            except Exception:
+                pass  # Fall through to Django ORM
+        
+        # Django ORM fallback
+        comments = PlanComment.objects.filter(
+            plan_id=plan_id,
+            plan_type=plan_type,
+            is_active=True
+        )
+        
+        if not include_replies:
+            comments = comments.filter(parent_comment__isnull=True)
+        
+        return [CommentManager._comment_to_dict(c) for c in comments]
+    
+    @staticmethod
+    def get_comments_for_activity(plan_id, plan_type, activity_id):
+        """Get activity-specific comments"""
+        if MONGODB_AVAILABLE:
+            try:
+                return CollaborativeComment.get_comments_for_activity(plan_id, plan_type, activity_id)
+            except Exception:
+                pass
+        
+        # Django ORM fallback
+        comments = PlanComment.objects.filter(
+            plan_id=plan_id,
+            plan_type=plan_type,
+            activity_id=activity_id,
+            is_active=True
+        )
+        
+        return [CommentManager._comment_to_dict(c) for c in comments]
+    
+    @staticmethod
+    def toggle_like(comment_id, student):
+        """Toggle like on a comment"""
+        if MONGODB_AVAILABLE:
+            try:
+                return CollaborativeComment.toggle_like(comment_id, student.id)
+            except Exception:
+                pass
+        
+        # Django ORM fallback
+        try:
+            comment = PlanComment.objects.get(id=comment_id)
+            like, created = CommentLike.objects.get_or_create(
+                comment=comment,
+                student=student
+            )
+            
+            if not created:
+                like.delete()
+                comment.likes_count = max(0, comment.likes_count - 1)
+                is_liked = False
+            else:
+                comment.likes_count += 1
+                is_liked = True
+            
+            comment.save()
+            return True, comment.likes_count, is_liked
+        except PlanComment.DoesNotExist:
+            return False, 0, False
+    
+    @staticmethod
+    def get_comment_stats(plan_id, plan_type):
+        """Get comment statistics"""
+        if MONGODB_AVAILABLE:
+            try:
+                return CollaborativeComment.get_comment_stats(plan_id, plan_type)
+            except Exception:
+                pass
+        
+        # Django ORM fallback
+        comments = PlanComment.objects.filter(
+            plan_id=plan_id,
+            plan_type=plan_type,
+            is_active=True
+        )
+        
+        stats = {
+            'total_comments': comments.count(),
+            'general_comments': comments.filter(comment_type='general').count(),
+            'suggestions': comments.filter(comment_type='suggestion').count(),
+            'questions': comments.filter(comment_type='question').count(),
+            'experiences': comments.filter(comment_type='experience').count(),
+            'average_rating': 0,
+            'unique_contributors': comments.values('student').distinct().count()
+        }
+        
+        ratings = comments.exclude(rating__isnull=True).values_list('rating', flat=True)
+        if ratings:
+            stats['average_rating'] = sum(ratings) / len(ratings)
+        
+        return stats
+    
+    @staticmethod
+    def _comment_to_dict(comment):
+        """Convert Django ORM comment to dict format"""
+        return {
+            '_id': str(comment.id),
+            'plan_id': str(comment.plan_id),
+            'plan_type': comment.plan_type,
+            'user_id': str(comment.student.id),
+            'user_name': comment.user_name,
+            'content': comment.content,
+            'comment_type': comment.comment_type,
+            'activity_id': str(comment.activity_id) if comment.activity_id else None,
+            'rating': comment.rating,
+            'tags': comment.tags,
+            'parent_comment_id': str(comment.parent_comment.id) if comment.parent_comment else None,
+            'likes_count': comment.likes_count,
+            'liked_by': [str(like.student.id) for like in comment.commentlike_set.all()],
+            'replies_count': comment.replies_count,
+            'is_active': comment.is_active,
+            'created_at': comment.created_at,
+            'updated_at': comment.updated_at
+        }
+
 @login_required
 def add_plan_comment(request, plan_id, plan_type):
     """Agregar comentario colaborativo a un plan de evaluación"""
@@ -775,14 +1009,13 @@ def add_plan_comment(request, plan_id, plan_type):
             tags_list = [tag.strip() for tag in tags.split(',') if tag.strip()]
         
         # Crear comentario
-        comment_id = CollaborativeComment.create_comment(
+        comment_id = CommentManager.create_comment(
             plan_id=plan_id,
             plan_type=plan_type,
-            user_id=student_profile.id,
-            user_name=f"{request.user.first_name} {request.user.last_name}",
+            student=student_profile,
             content=content,
             comment_type=comment_type,
-            activity_id=activity_id if activity_id else None,
+            activity_id=activity_id,
             rating=rating,
             tags=tags_list
         )
@@ -829,10 +1062,10 @@ def plan_comments(request, plan_id, plan_type):
         activities = plan.activities.all()
     
     # Obtener comentarios de MongoDB
-    comments = CollaborativeComment.get_comments_for_plan(plan_id, plan_type, include_replies=False)
+    comments = CommentManager.get_comments_for_plan(plan_id, plan_type, include_replies=False)
     
     # Obtener estadísticas de comentarios
-    comment_stats = CollaborativeComment.get_comment_stats(plan_id, plan_type)
+    comment_stats = CommentManager.get_comment_stats(plan_id, plan_type)
     
     # Registrar view en analytics
     PlanAnalytics.record_plan_view(
@@ -865,38 +1098,80 @@ def reply_to_comment(request, comment_id):
         content = request.POST.get('content', '').strip()
         
         if not content:
-            return JsonResponse({'success': False, 'message': 'El comentario no puede estar vacío.'})
-        
-        # Obtener comentario padre
-        parent_comment = CollaborativeComment.find_one({'_id': comment_id})
-        if not parent_comment:
-            return JsonResponse({'success': False, 'message': 'Comentario no encontrado.'})
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'El comentario no puede estar vacío.'})
+            else:
+                messages.error(request, 'El comentario no puede estar vacío.')
+                return redirect('student_portal:evaluation_plans')
         
         student_profile = request.user.student_profile
         
-        # Crear respuesta
-        reply_id = CollaborativeComment.create_comment(
-            plan_id=parent_comment['plan_id'],
-            plan_type=parent_comment['plan_type'],
-            user_id=student_profile.id,
-            user_name=f"{request.user.first_name} {request.user.last_name}",
-            content=content,
-            parent_comment_id=comment_id,
-            comment_type='reply'
-        )
+        # Find parent comment using appropriate backend
+        parent_comment = None
+        if MONGODB_AVAILABLE:
+            try:
+                parent_comment = CollaborativeComment.find_one({'_id': comment_id})
+            except Exception:
+                pass
         
-        # Registrar actividad
-        StudentActivity.log_activity(
-            student_id=str(student_profile.id),
-            activity_type='comment_reply',
-            details={'parent_comment_id': comment_id}
-        )
+        if not parent_comment:
+            # Try Django ORM fallback
+            try:
+                django_comment = PlanComment.objects.get(id=comment_id)
+                parent_comment = CommentManager._comment_to_dict(django_comment)
+            except PlanComment.DoesNotExist:
+                pass
         
-        return JsonResponse({
-            'success': True,
-            'message': 'Respuesta agregada exitosamente.',
-            'reply_id': reply_id
-        })
+        if not parent_comment:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'Comentario no encontrado.'})
+            else:
+                messages.error(request, 'Comentario no encontrado.')
+                return redirect('student_portal:evaluation_plans')
+        
+        try:
+            # Crear respuesta
+            reply_id = CommentManager.create_comment(
+                plan_id=parent_comment['plan_id'],
+                plan_type=parent_comment['plan_type'],
+                student=student_profile,
+                content=content,
+                comment_type='reply',
+                parent_comment_id=comment_id
+            )
+            
+            if reply_id:
+                # Registrar actividad
+                StudentActivity.log_activity(
+                    student_id=str(student_profile.id),
+                    activity_type='comment_reply',
+                    details={'parent_comment_id': comment_id}
+                )
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Respuesta agregada exitosamente.',
+                        'reply_id': str(reply_id)
+                    })
+                else:
+                    messages.success(request, 'Respuesta agregada exitosamente.')
+                    return redirect('student_portal:plan_comments', 
+                                  plan_id=parent_comment['plan_id'], 
+                                  plan_type=parent_comment['plan_type'])
+            else:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'message': 'Error al crear la respuesta.'})
+                else:
+                    messages.error(request, 'Error al crear la respuesta.')
+                    return redirect('student_portal:evaluation_plans')
+                    
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
+            else:
+                messages.error(request, f'Error al crear la respuesta: {str(e)}')
+                return redirect('student_portal:evaluation_plans')
     
     return JsonResponse({'success': False, 'message': 'Método no permitido.'})
 
@@ -907,14 +1182,9 @@ def toggle_comment_like(request, comment_id):
     if request.method == 'POST':
         student_profile = request.user.student_profile
         
-        success = CollaborativeComment.toggle_like(comment_id, student_profile.id)
+        success, likes_count, is_liked = CommentManager.toggle_like(comment_id, student_profile)
         
         if success:
-            # Obtener el comentario actualizado para devolver el nuevo estado
-            comment = CollaborativeComment.find_one({'_id': comment_id})
-            likes_count = comment.get('likes_count', 0) if comment else 0
-            is_liked = str(student_profile.id) in comment.get('liked_by', []) if comment else False
-            
             return JsonResponse({
                 'success': True,
                 'likes_count': likes_count,
@@ -943,7 +1213,7 @@ def activity_comments(request, plan_id, plan_type, activity_id):
         activity = get_object_or_404(CustomEvaluationActivity, id=activity_id, plan=plan)
     
     # Obtener comentarios específicos de la actividad
-    comments = CollaborativeComment.get_comments_for_activity(plan_id, plan_type, activity_id)
+    comments = CommentManager.get_comments_for_activity(plan_id, plan_type, activity_id)
     
     context = {
         'plan': plan,
@@ -968,11 +1238,7 @@ def collaborative_dashboard(request):
     popular_custom_plans = PlanAnalytics.get_plan_popularity('custom', limit=5)
     
     # Obtener comentarios recientes del usuario
-    recent_comments = CollaborativeComment.find(
-        {'user_id': str(student_profile.id)},
-        projection={'content': 1, 'created_at': 1, 'plan_id': 1, 'plan_type': 1, 'comment_type': 1}
-    )
-    recent_comments = sorted(recent_comments, key=lambda x: x.get('created_at', datetime.min), reverse=True)[:10]
+    recent_comments = CommentManager.get_comments_for_plan(None, 'general', include_replies=False)[:10]
     
     context = {
         'activity_summary': activity_summary,
@@ -1524,11 +1790,11 @@ def admin_group_analytics(request, group_id):
     # Comentarios y participación
     plan_analytics = None
     if evaluation_plan:
-        comments = CollaborativeComment.find({'plan_id': str(evaluation_plan.id), 'plan_type': 'official'})
+        comments = CommentManager.get_comments_for_plan(str(evaluation_plan.id), 'official', include_replies=False)
         plan_analytics = {
             'total_comments': len(comments),
-            'unique_commenters': len(set(c.get('user_id') for c in comments)),
-            'engagement_rate': (len(set(c.get('user_id') for c in comments)) / len(student_grades) * 100) if student_grades else 0
+            'unique_commenters': len(set(c['user_id'] for c in comments)),
+            'engagement_rate': (len(set(c['user_id'] for c in comments)) / len(student_grades) * 100) if student_grades else 0
         }
     
     context = {

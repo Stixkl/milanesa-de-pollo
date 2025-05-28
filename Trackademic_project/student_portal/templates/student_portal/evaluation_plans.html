@@ -111,7 +111,7 @@
                                 </div>
                                 <div class="card-footer bg-transparent">
                                     <div class="btn-group w-100" role="group">
-                                        <a href="{% url 'student_portal:plan_comments' plan.id 'official' %}" 
+                                        <a href="{% url 'student_portal:simple_plan_comments' plan.id 'official' %}" 
                                            class="btn btn-outline-primary btn-sm">
                                             <i class="fas fa-comments"></i> Comentarios
                                         </a>
@@ -139,7 +139,7 @@
                                 <i class="fas fa-times"></i> Limpiar Filtros
                             </a>
                         {% else %}
-                            <p class="text-muted">Los profesores aún no han publicado planes de evaluación oficiales.</p>
+                        <p class="text-muted">Los profesores aún no han publicado planes de evaluación oficiales.</p>
                         {% endif %}
                     </div>
                 {% endif %}
@@ -198,14 +198,14 @@
                                     <div class="d-grid gap-2">
                                         <!-- Primera fila de botones -->
                                         <div class="btn-group" role="group">
-                                            <a href="{% url 'student_portal:edit_custom_plan' plan.id %}" 
-                                               class="btn btn-warning btn-sm">
-                                                <i class="fas fa-edit"></i> Editar
-                                            </a>
-                                            <a href="{% url 'student_portal:plan_comments' plan.id 'custom' %}" 
-                                               class="btn btn-outline-primary btn-sm">
-                                                <i class="fas fa-comments"></i> Comentarios
-                                            </a>
+                                        <a href="{% url 'student_portal:edit_custom_plan' plan.id %}" 
+                                           class="btn btn-warning btn-sm">
+                                            <i class="fas fa-edit"></i> Editar
+                                        </a>
+                                        <a href="{% url 'student_portal:simple_plan_comments' plan.id 'custom' %}" 
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-comments"></i> Comentarios
+                                        </a>
                                         </div>
                                         <!-- Segunda fila - Agregar Curso -->
                                         {% if plan.is_enrolled %}
@@ -232,7 +232,7 @@
                         {% if selected_program or selected_semester %}
                             <p class="text-muted">No tienes planes personalizados para los filtros seleccionados.</p>
                         {% else %}
-                            <p class="text-muted">Crea tu propio plan de evaluación para gestionar mejor tus notas.</p>
+                        <p class="text-muted">Crea tu propio plan de evaluación para gestionar mejor tus notas.</p>
                         {% endif %}
                     </div>
                 {% endif %}
