@@ -45,429 +45,550 @@
         </div>
     </div>
 
-    <!-- Métricas Principales -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 bg-gradient-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h3 class="mb-0">{{ semester_summaries.0.average_grade|floatformat:2|default:"0.00" }}</h3>
-                            <span class="small">Promedio Actual</span>
-                            {% if predictions.semester_projection %}
-                            <br><small class="opacity-75">Proyección: {{ predictions.semester_projection|floatformat:2 }}</small>
-                            {% endif %}
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-chart-line fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 bg-gradient-success text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h3 class="mb-0">{{ subject_stats.below_3 }}</h3>
-                            <span class="small">Materias en Riesgo</span>
-                            <br><small class="opacity-75">De {{ subject_stats.total_subjects }} total</small>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 bg-gradient-warning text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h3 class="mb-0">{{ subject_stats.below_3 }}</h3>
-                            <span class="small">Materias en Riesgo</span>
-                            <br><small class="opacity-75">De {{ subject_stats.total_subjects }} total</small>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 bg-gradient-info text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h3 class="mb-0">{{ collaboration_stats.engagement_level }}</h3>
-                            <span class="small">Nivel de Participación</span>
-                            <br><small class="opacity-75">{{ collaboration_stats.total_comments }} comentarios</small>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-users fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- Botón de impresión para Informe 1 -->
+    <div class="mb-3">
+        <button class="btn btn-outline-primary" onclick="printSection('informe1')">
+            <i class="fas fa-print"></i> Imprimir Informe: Rendimiento Académico Global
+        </button>
     </div>
-
-    <!-- Gráficos Principales -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-chart-area text-primary"></i> Evolución del Rendimiento Académico</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="performanceChart" height="100"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-chart-pie text-success"></i> Distribución de Notas</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="gradesDistributionChart" height="200"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Análisis Detallado -->
-    <div class="row mb-4">
-        <!-- Materias Más Desafiantes -->
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle text-warning"></i> Análisis de Materias Desafiantes</h5>
-                </div>
-                <div class="card-body">
-                    {% if subject_performance %}
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Materia</th>
-                                    <th>Nota</th>
-                                    <th>Riesgo</th>
-                                    <th>Créditos</th>
-                                    <th>Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for subject in subject_performance|slice:":5" %}
-                                <tr>
-                                    <td>
-                                        <strong>{{ subject.subject.name }}</strong>
-                                        <br><small class="text-muted">{{ subject.subject.code }}</small>
-                                    </td>
-                                    <td>
-                                        <span class="badge {% if subject.grade >= 3.0 %}bg-success{% elif subject.grade >= 2.5 %}bg-warning{% else %}bg-danger{% endif %}">
-                                            {{ subject.grade|floatformat:2 }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge {% if subject.risk_level == 'Alto' %}bg-danger{% elif subject.risk_level == 'Medio' %}bg-warning{% else %}bg-success{% endif %}">
-                                            {{ subject.risk_level }}
-                                        </span>
-                                    </td>
-                                    <td>{{ subject.credits }}</td>
-                                    <td>
-                                        {% if subject.grade < 3.0 %}
-                                        <i class="fas fa-exclamation-circle text-danger" title="Buscar tutoría"></i>
-                                        {% elif subject.grade < 3.5 %}
-                                        <i class="fas fa-arrow-up text-warning" title="Mejorar estudio"></i>
-                                        {% else %}
-                                        <i class="fas fa-check-circle text-success" title="Mantener"></i>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="text-center py-3">
-                        <i class="fas fa-chart-bar fa-2x text-muted mb-2"></i>
-                        <p class="text-muted">Sin datos suficientes para análisis</p>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Progreso de Metas -->
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-target text-info"></i> Progreso hacia Metas</h5>
-                </div>
-                <div class="card-body">
-                    {% if goals_progress %}
-                    {% for goal in goals_progress|slice:":3" %}
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="small fw-bold">{{ goal.estimation.evaluation_plan.group.subject.name }}</span>
-                            <span class="small text-muted">Meta: {{ goal.estimation.target_grade|floatformat:1 }}</span>
-                        </div>
-                        {% with progress=goal.result.current_grade|div:goal.estimation.target_grade|mul:100 %}
-                        <div class="progress mb-1" style="height: 10px;">
-                            <div class="progress-bar {% if goal.result.is_possible %}bg-success{% else %}bg-danger{% endif %}" 
-                                 style="width: {{ progress|floatformat:0|default:0 }}%">
-                            </div>
-                        </div>
-                        {% endwith %}
+    <div id="informe1">
+        <h3 class="mb-4">Informe 1: Rendimiento Académico Global</h3>
+        <!-- Métricas Principales -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card border-0 bg-gradient-primary text-white">
+                    <div class="card-body">
                         <div class="d-flex justify-content-between">
-                            <small class="text-muted">Actual: {{ goal.result.current_grade|floatformat:2 }}</small>
-                            <small class="{% if goal.result.is_possible %}text-success{% else %}text-danger{% endif %}">
-                                Necesita: {{ goal.result.needed_grade|floatformat:2 }}
-                            </small>
+                            <div>
+                                <h3 class="mb-0">{{ semester_summaries.0.average_grade|floatformat:2|default:"0.00" }}</h3>
+                                <span class="small">Promedio Actual</span>
+                                {% if predictions.semester_projection %}
+                                <br><small class="opacity-75">Proyección: {{ predictions.semester_projection|floatformat:2 }}</small>
+                                {% endif %}
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-chart-line fa-2x opacity-75"></i>
+                            </div>
                         </div>
                     </div>
-                    {% endfor %}
-                    {% else %}
-                    <div class="text-center py-3">
-                        <i class="fas fa-bullseye fa-2x text-muted mb-2"></i>
-                        <p class="text-muted">No hay metas establecidas</p>
-                        <a href="{% url 'student_portal:courses_dashboard' %}" class="btn btn-primary btn-sm">
-                            Establecer Metas
-                        </a>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Análisis Predictivo y Recomendaciones -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card border-primary">
-                <div class="card-header bg-primary text-white">
-                    <h6 class="mb-0"><i class="fas fa-crystal-ball"></i> Análisis Predictivo</h6>
-                </div>
-                <div class="card-body">
-                    {% if predictions.semester_projection %}
-                    <div class="text-center mb-3">
-                        <h3 class="text-primary">{{ predictions.semester_projection|floatformat:2 }}</h3>
-                        <small class="text-muted">Proyección Final del Semestre</small>
+            <div class="col-md-3">
+                <div class="card border-0 bg-gradient-success text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h3 class="mb-0">{{ subject_stats.below_3 }}</h3>
+                                <span class="small">Materias en Riesgo</span>
+                                <br><small class="opacity-75">De {{ subject_stats.total_subjects }} total</small>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                            </div>
+                        </div>
                     </div>
-                    {% endif %}
-                    
-                    {% if predictions.risk_subjects %}
-                    <h6 class="text-danger">Materias en Riesgo:</h6>
-                    <ul class="list-unstyled">
-                        {% for subject in predictions.risk_subjects %}
-                        <li><i class="fas fa-exclamation-triangle text-danger me-1"></i> {{ subject }}</li>
-                        {% endfor %}
-                    </ul>
-                    {% endif %}
                 </div>
             </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card border-success">
-                <div class="card-header bg-success text-white">
-                    <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Recomendaciones</h6>
-                </div>
-                <div class="card-body">
-                    {% if predictions.improvement_opportunities %}
-                    <ul class="list-unstyled">
-                        {% for opportunity in predictions.improvement_opportunities %}
-                        <li class="mb-2">
-                            <i class="fas fa-arrow-right text-success me-2"></i>
-                            {{ opportunity }}
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <div class="text-center py-3">
-                        <i class="fas fa-thumbs-up fa-2x text-success mb-2"></i>
-                        <p class="text-success mb-0">¡Excelente trabajo!</p>
-                        <small class="text-muted">Mantén tu rendimiento actual</small>
+            <div class="col-md-3">
+                <div class="card border-0 bg-gradient-warning text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h3 class="mb-0">{{ subject_stats.below_3 }}</h3>
+                                <span class="small">Materias en Riesgo</span>
+                                <br><small class="opacity-75">De {{ subject_stats.total_subjects }} total</small>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                            </div>
+                        </div>
                     </div>
-                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 bg-gradient-info text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h3 class="mb-0">{{ collaboration_stats.engagement_level }}</h3>
+                                <span class="small">Nivel de Participación</span>
+                                <br><small class="opacity-75">{{ collaboration_stats.total_comments }} comentarios</small>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-users fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
-            <div class="card border-info">
-                <div class="card-header bg-info text-white">
-                    <h6 class="mb-0"><i class="fas fa-chart-bar"></i> Comparación</h6>
+        <!-- Gráficos Principales -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-area text-primary"></i> Evolución del Rendimiento Académico</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="performanceChart" height="100"></canvas>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="small">Percentil:</span>
-                        <strong class="text-info">{{ comparative_stats.percentile_rank }}%</strong>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-pie text-success"></i> Distribución de Notas</h5>
                     </div>
-                    <div class="progress mb-3" style="height: 8px;">
-                        <div class="progress-bar bg-info" style="width: {{ comparative_stats.percentile_rank }}%"></div>
+                    <div class="card-body">
+                        <canvas id="gradesDistributionChart" height="200"></canvas>
                     </div>
-                    <p class="small text-muted mb-0">
-                        {% if comparative_stats.above_program_average %}
-                        <i class="fas fa-arrow-up text-success me-1"></i>
-                        Arriba del promedio del programa
+                </div>
+            </div>
+        </div>
+
+        <!-- Análisis Detallado -->
+        <div class="row mb-4">
+            <!-- Materias Más Desafiantes -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-exclamation-triangle text-warning"></i> Análisis de Materias Desafiantes</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if subject_performance %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Materia</th>
+                                        <th>Nota</th>
+                                        <th>Riesgo</th>
+                                        <th>Créditos</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for subject in subject_performance|slice:":5" %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ subject.subject.name }}</strong>
+                                            <br><small class="text-muted">{{ subject.subject.code }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if subject.grade >= 3.0 %}bg-success{% elif subject.grade >= 2.5 %}bg-warning{% else %}bg-danger{% endif %}">
+                                                {{ subject.grade|floatformat:2 }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if subject.risk_level == 'Alto' %}bg-danger{% elif subject.risk_level == 'Medio' %}bg-warning{% else %}bg-success{% endif %}">
+                                                {{ subject.risk_level }}
+                                            </span>
+                                        </td>
+                                        <td>{{ subject.credits }}</td>
+                                        <td>
+                                            {% if subject.grade < 3.0 %}
+                                            <i class="fas fa-exclamation-circle text-danger" title="Buscar tutoría"></i>
+                                            {% elif subject.grade < 3.5 %}
+                                            <i class="fas fa-arrow-up text-warning" title="Mejorar estudio"></i>
+                                            {% else %}
+                                            <i class="fas fa-check-circle text-success" title="Mantener"></i>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                         {% else %}
-                        <i class="fas fa-arrow-down text-warning me-1"></i>
-                        Debajo del promedio del programa
+                        <div class="text-center py-3">
+                            <i class="fas fa-chart-bar fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">Sin datos suficientes para análisis</p>
+                        </div>
                         {% endif %}
-                    </p>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Actividad y Engagement -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-activity text-primary"></i> Análisis de Actividad (Últimos 30 días)</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-md-2">
-                            <div class="border rounded p-3">
-                                <h4 class="text-primary">{{ activity_summary.dashboard_visits }}</h4>
-                                <small class="text-muted">Visitas al Dashboard</small>
+            <!-- Progreso de Metas -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-target text-info"></i> Progreso hacia Metas</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if goals_progress %}
+                        {% for goal in goals_progress|slice:":3" %}
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small fw-bold">{{ goal.estimation.evaluation_plan.group.subject.name }}</span>
+                                <span class="small text-muted">Meta: {{ goal.estimation.target_grade|floatformat:1 }}</span>
+                            </div>
+                            {% with progress=goal.result.current_grade|div:goal.estimation.target_grade|mul:100 %}
+                            <div class="progress mb-1" style="height: 10px;">
+                                <div class="progress-bar {% if goal.result.is_possible %}bg-success{% else %}bg-danger{% endif %}" 
+                                     style="width: {{ progress|floatformat:0|default:0 }}%">
+                                </div>
+                            </div>
+                            {% endwith %}
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Actual: {{ goal.result.current_grade|floatformat:2 }}</small>
+                                <small class="{% if goal.result.is_possible %}text-success{% else %}text-danger{% endif %}">
+                                    Necesita: {{ goal.result.needed_grade|floatformat:2 }}
+                                </small>
                             </div>
                         </div>
-                        <div class="col-md-2">
-                            <div class="border rounded p-3">
-                                <h4 class="text-success">{{ activity_summary.grades_updated }}</h4>
-                                <small class="text-muted">Notas Actualizadas</small>
-                            </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-bullseye fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">No hay metas establecidas</p>
+                            <a href="{% url 'student_portal:courses_dashboard' %}" class="btn btn-primary btn-sm">
+                                Establecer Metas
+                            </a>
                         </div>
-                        <div class="col-md-2">
-                            <div class="border rounded p-3">
-                                <h4 class="text-warning">{{ activity_summary.plans_created }}</h4>
-                                <small class="text-muted">Planes Creados</small>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="border rounded p-3">
-                                <h4 class="text-info">{{ activity_summary.comments_made }}</h4>
-                                <small class="text-muted">Comentarios</small>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="border rounded p-3">
-                                <h4 class="text-danger">{{ activity_summary.goals_set }}</h4>
-                                <small class="text-muted">Metas Establecidas</small>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="border rounded p-3">
-                                <h4 class="text-dark">{{ activity_summary.total_activities }}</h4>
-                                <small class="text-muted">Actividad Total</small>
-                            </div>
-                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Resumen Detallado por Semestre -->
-    {% if semester_summaries %}
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-calendar-alt text-primary"></i> Historial Académico Detallado</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>Semestre</th>
-                                    <th>Período</th>
-                                    <th>Promedio</th>
-                                    <th>Créditos</th>
-                                    <th>Eficiencia</th>
-                                    <th>Estado</th>
-                                    <th>Tendencia</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for summary in semester_summaries %}
-                                <tr>
-                                    <td><strong>{{ summary.semester.name }}</strong></td>
-                                    <td>{{ summary.semester.start_date|date:"M Y" }} - {{ summary.semester.end_date|date:"M Y" }}</td>
-                                    <td>
-                                        <span class="h6 {% if summary.average_grade >= 4.0 %}text-success{% elif summary.average_grade >= 3.5 %}text-warning{% elif summary.average_grade >= 3.0 %}text-info{% else %}text-danger{% endif %}">
-                                            {{ summary.average_grade|floatformat:2 }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ summary.credits_earned }}</span> / 
-                                        <span class="badge bg-primary">{{ summary.credits_attempted }}</span>
-                                    </td>
-                                    <td>
-                                        {% if summary.credits_attempted > 0 %}
-                                            {% with efficiency=summary.credits_earned|div:summary.credits_attempted|mul:100 %}
-                                            <div class="progress" style="height: 20px; width: 80px;">
-                                                <div class="progress-bar {% if efficiency >= 90 %}bg-success{% elif efficiency >= 70 %}bg-warning{% else %}bg-danger{% endif %}" 
-                                                     style="width: {{ efficiency|floatformat:0 }}%">
-                                                    {{ efficiency|floatformat:0 }}%
+        <!-- Resumen Detallado por Semestre -->
+        {% if semester_summaries %}
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-calendar-alt text-primary"></i> Historial Académico Detallado</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Semestre</th>
+                                        <th>Período</th>
+                                        <th>Promedio</th>
+                                        <th>Créditos</th>
+                                        <th>Eficiencia</th>
+                                        <th>Estado</th>
+                                        <th>Tendencia</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for summary in semester_summaries %}
+                                    <tr>
+                                        <td><strong>{{ summary.semester.name }}</strong></td>
+                                        <td>{{ summary.semester.start_date|date:"M Y" }} - {{ summary.semester.end_date|date:"M Y" }}</td>
+                                        <td>
+                                            <span class="h6 {% if summary.average_grade >= 4.0 %}text-success{% elif summary.average_grade >= 3.5 %}text-warning{% elif summary.average_grade >= 3.0 %}text-info{% else %}text-danger{% endif %}">
+                                                {{ summary.average_grade|floatformat:2 }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ summary.credits_earned }}</span> / 
+                                            <span class="badge bg-primary">{{ summary.credits_attempted }}</span>
+                                        </td>
+                                        <td>
+                                            {% if summary.credits_attempted > 0 %}
+                                                {% with efficiency=summary.credits_earned|div:summary.credits_attempted|mul:100 %}
+                                                <div class="progress" style="height: 20px; width: 80px;">
+                                                    <div class="progress-bar {% if efficiency >= 90 %}bg-success{% elif efficiency >= 70 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                         style="width: {{ efficiency|floatformat:0 }}%">
+                                                        {{ efficiency|floatformat:0 }}%
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            {% endwith %}
-                                        {% else %}
-                                            <span class="text-muted">N/A</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if summary.average_grade >= 3.5 %}
-                                            <span class="badge bg-success">Excelente</span>
-                                        {% elif summary.average_grade >= 3.0 %}
-                                            <span class="badge bg-info">Satisfactorio</span>
-                                        {% elif summary.average_grade >= 2.5 %}
-                                            <span class="badge bg-warning">Regular</span>
-                                        {% else %}
-                                            <span class="badge bg-danger">Necesita Mejora</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if forloop.counter0 < semester_summaries|length|add:"-1" %}
-                                            {% with next_summary=semester_summaries|slice:forloop.counter0|first %}
-                                                {% if summary.average_grade > next_summary.average_grade %}
-                                                    <i class="fas fa-arrow-up text-success" title="Mejora"></i>
-                                                {% elif summary.average_grade < next_summary.average_grade %}
-                                                    <i class="fas fa-arrow-down text-danger" title="Decline"></i>
-                                                {% else %}
-                                                    <i class="fas fa-minus text-muted" title="Estable"></i>
-                                                {% endif %}
-                                            {% endwith %}
-                                        {% else %}
-                                            <i class="fas fa-circle text-muted" title="Primer registro"></i>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <a href="{% url 'student_portal:semester_summary' summary.semester.id %}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-eye"></i> Ver Detalle
-                                        </a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                                                {% endwith %}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if summary.average_grade >= 3.5 %}
+                                                <span class="badge bg-success">Excelente</span>
+                                            {% elif summary.average_grade >= 3.0 %}
+                                                <span class="badge bg-info">Satisfactorio</span>
+                                            {% elif summary.average_grade >= 2.5 %}
+                                                <span class="badge bg-warning">Regular</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Necesita Mejora</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if forloop.counter0 < semester_summaries|length|add:"-1" %}
+                                                {% with next_summary=semester_summaries|slice:forloop.counter0|first %}
+                                                    {% if summary.average_grade > next_summary.average_grade %}
+                                                        <i class="fas fa-arrow-up text-success" title="Mejora"></i>
+                                                    {% elif summary.average_grade < next_summary.average_grade %}
+                                                        <i class="fas fa-arrow-down text-danger" title="Decline"></i>
+                                                    {% else %}
+                                                        <i class="fas fa-minus text-muted" title="Estable"></i>
+                                                    {% endif %}
+                                                {% endwith %}
+                                            {% else %}
+                                                <i class="fas fa-circle text-muted" title="Primer registro"></i>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'student_portal:semester_summary' summary.semester.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> Ver Detalle
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <!-- Botón de impresión para Informe 2 -->
+    <div class="mb-3 mt-5">
+        <button class="btn btn-outline-success" onclick="printSection('informe2')">
+            <i class="fas fa-print"></i> Imprimir Informe: Análisis de Materias y Riesgos
+        </button>
+    </div>
+    <div id="informe2">
+        <h3 class="mb-4">Informe 2: Análisis de Materias y Riesgos</h3>
+        <!-- Análisis Detallado, Progreso de Metas, Análisis Predictivo, Actividad -->
+        <div class="row mb-4">
+            <!-- Análisis Detallado -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-exclamation-triangle text-warning"></i> Análisis de Materias Desafiantes</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if subject_performance %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Materia</th>
+                                        <th>Nota</th>
+                                        <th>Riesgo</th>
+                                        <th>Créditos</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for subject in subject_performance|slice:":5" %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ subject.subject.name }}</strong>
+                                            <br><small class="text-muted">{{ subject.subject.code }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if subject.grade >= 3.0 %}bg-success{% elif subject.grade >= 2.5 %}bg-warning{% else %}bg-danger{% endif %}">
+                                                {{ subject.grade|floatformat:2 }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if subject.risk_level == 'Alto' %}bg-danger{% elif subject.risk_level == 'Medio' %}bg-warning{% else %}bg-success{% endif %}">
+                                                {{ subject.risk_level }}
+                                            </span>
+                                        </td>
+                                        <td>{{ subject.credits }}</td>
+                                        <td>
+                                            {% if subject.grade < 3.0 %}
+                                            <i class="fas fa-exclamation-circle text-danger" title="Buscar tutoría"></i>
+                                            {% elif subject.grade < 3.5 %}
+                                            <i class="fas fa-arrow-up text-warning" title="Mejorar estudio"></i>
+                                            {% else %}
+                                            <i class="fas fa-check-circle text-success" title="Mantener"></i>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-chart-bar fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">Sin datos suficientes para análisis</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progreso de Metas -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-target text-info"></i> Progreso hacia Metas</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if goals_progress %}
+                        {% for goal in goals_progress|slice:":3" %}
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small fw-bold">{{ goal.estimation.evaluation_plan.group.subject.name }}</span>
+                                <span class="small text-muted">Meta: {{ goal.estimation.target_grade|floatformat:1 }}</span>
+                            </div>
+                            {% with progress=goal.result.current_grade|div:goal.estimation.target_grade|mul:100 %}
+                            <div class="progress mb-1" style="height: 10px;">
+                                <div class="progress-bar {% if goal.result.is_possible %}bg-success{% else %}bg-danger{% endif %}" 
+                                     style="width: {{ progress|floatformat:0|default:0 }}%">
+                                </div>
+                            </div>
+                            {% endwith %}
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Actual: {{ goal.result.current_grade|floatformat:2 }}</small>
+                                <small class="{% if goal.result.is_possible %}text-success{% else %}text-danger{% endif %}">
+                                    Necesita: {{ goal.result.needed_grade|floatformat:2 }}
+                                </small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-bullseye fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">No hay metas establecidas</p>
+                            <a href="{% url 'student_portal:courses_dashboard' %}" class="btn btn-primary btn-sm">
+                                Establecer Metas
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mb-4">
+            <!-- Análisis Predictivo y Recomendaciones -->
+            <div class="col-md-4">
+                <div class="card border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0"><i class="fas fa-crystal-ball"></i> Análisis Predictivo</h6>
+                    </div>
+                    <div class="card-body">
+                        {% if predictions.semester_projection %}
+                        <div class="text-center mb-3">
+                            <h3 class="text-primary">{{ predictions.semester_projection|floatformat:2 }}</h3>
+                            <small class="text-muted">Proyección Final del Semestre</small>
+                        </div>
+                        {% endif %}
+                        
+                        {% if predictions.risk_subjects %}
+                        <h6 class="text-danger">Materias en Riesgo:</h6>
+                        <ul class="list-unstyled">
+                            {% for subject in predictions.risk_subjects %}
+                            <li><i class="fas fa-exclamation-triangle text-danger me-1"></i> {{ subject }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Recomendaciones</h6>
+                    </div>
+                    <div class="card-body">
+                        {% if predictions.improvement_opportunities %}
+                        <ul class="list-unstyled">
+                            {% for opportunity in predictions.improvement_opportunities %}
+                            <li class="mb-2">
+                                <i class="fas fa-arrow-right text-success me-2"></i>
+                                {{ opportunity }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-thumbs-up fa-2x text-success mb-2"></i>
+                            <p class="text-success mb-0">¡Excelente trabajo!</p>
+                            <small class="text-muted">Mantén tu rendimiento actual</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card border-info">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0"><i class="fas fa-chart-bar"></i> Comparación</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="small">Percentil:</span>
+                            <strong class="text-info">{{ comparative_stats.percentile_rank }}%</strong>
+                        </div>
+                        <div class="progress mb-3" style="height: 8px;">
+                            <div class="progress-bar bg-info" style="width: {{ comparative_stats.percentile_rank }}%"></div>
+                        </div>
+                        <p class="small text-muted mb-0">
+                            {% if comparative_stats.above_program_average %}
+                            <i class="fas fa-arrow-up text-success me-1"></i>
+                            Arriba del promedio del programa
+                            {% else %}
+                            <i class="fas fa-arrow-down text-warning me-1"></i>
+                            Debajo del promedio del programa
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mb-4">
+            <!-- Actividad y Engagement -->
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-activity text-primary"></i> Análisis de Actividad (Últimos 30 días)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-2">
+                                <div class="border rounded p-3">
+                                    <h4 class="text-primary">{{ activity_summary.dashboard_visits }}</h4>
+                                    <small class="text-muted">Visitas al Dashboard</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="border rounded p-3">
+                                    <h4 class="text-success">{{ activity_summary.grades_updated }}</h4>
+                                    <small class="text-muted">Notas Actualizadas</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="border rounded p-3">
+                                    <h4 class="text-warning">{{ activity_summary.plans_created }}</h4>
+                                    <small class="text-muted">Planes Creados</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="border rounded p-3">
+                                    <h4 class="text-info">{{ activity_summary.comments_made }}</h4>
+                                    <small class="text-muted">Comentarios</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="border rounded p-3">
+                                    <h4 class="text-danger">{{ activity_summary.goals_set }}</h4>
+                                    <small class="text-muted">Metas Establecidas</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="border rounded p-3">
+                                    <h4 class="text-dark">{{ activity_summary.total_activities }}</h4>
+                                    <small class="text-muted">Actividad Total</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    {% endif %}
 </div>
 
 <!-- Scripts de Gráficos -->
@@ -613,6 +734,15 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => console.error('Error actualizando datos:', error));
     }, 300000); // 5 minutos
 });
+
+function printSection(sectionId) {
+    var printContents = document.getElementById(sectionId).innerHTML;
+    var originalContents = document.body.innerHTML;
+    document.body.innerHTML = printContents;
+    window.print();
+    document.body.innerHTML = originalContents;
+    location.reload();
+}
 </script>
 
 <!-- Estilos CSS adicionales -->
