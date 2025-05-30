@@ -19,7 +19,8 @@ from academic_data.models import Group, Subject, StudentProfile, Program
 # Try to import MongoDB models, fallback to Django ORM if not available
 try:
     from nosql_utils.models import StudentActivity, UserPreference, CollaborativeComment, PlanAnalytics
-    MONGODB_AVAILABLE = True
+    # MONGODB_AVAILABLE = True  # COMENTADO: Forzamos el uso del backend Django ORM
+    MONGODB_AVAILABLE = False  # Forzar uso de ORM Django para depuración
 except ImportError:
     MONGODB_AVAILABLE = False
     # Create mock classes for when MongoDB is not available
@@ -118,9 +119,9 @@ def courses_dashboard(request):
     # Obtener todos los resúmenes de semestre del estudiante
     all_summaries = SemesterSummary.objects.filter(student=student_profile)
     if all_summaries.exists():
-        total_credits = sum(s.credits_attempted for s in all_summaries)
-        total_earned_credits = sum(s.credits_earned for s in all_summaries)
-        weighted_sum = sum(float(s.average_grade) * s.credits_attempted for s in all_summaries)
+        total_credits = sum(s.credits_attempted for s in all_summaries) or 0
+        total_earned_credits = sum(s.credits_earned for s in all_summaries) or 0
+        weighted_sum = sum(float(s.average_grade) * s.credits_attempted for s in all_summaries) or 0.0
         if total_credits > 0:
             global_average = weighted_sum / total_credits
         else:
@@ -128,12 +129,39 @@ def courses_dashboard(request):
     else:
         global_average = 0.0
         total_earned_credits = 0
+        total_credits = 0
     
     # Registrar actividad
     StudentActivity.log_activity(
         student_id=str(student_profile.id),
         activity_type='courses_dashboard_visit'
     )
+    
+    # Historial académico: obtener todas las materias inscritas y sus calificaciones
+    enrollments = StudentEnrollment.objects.filter(student=student_profile)
+    academic_history = []
+    for enrollment in enrollments:
+        group = enrollment.group
+        subject = group.subject
+        # Buscar la calificación final de la materia (si existe)
+        summary = SemesterSummary.objects.filter(student=student_profile, semester=subject.semester).first()
+        final_grade = summary.average_grade if summary else None
+        academic_history.append({
+            'subject': subject,
+            'group': group,
+            'final_grade': final_grade,
+            'credits': subject.credits,
+        })
+    
+    # Contar comentarios por materia (oficiales y personalizados)
+    subject_comments_count = []
+    for subject in Subject.objects.all():
+        official_plan_ids = EvaluationPlan.objects.filter(group__subject=subject).values_list('id', flat=True)
+        custom_plan_ids = CustomEvaluationPlan.objects.filter(group__subject=subject).values_list('id', flat=True)
+        count_official = PlanComment.objects.filter(plan_id__in=official_plan_ids, plan_type='official').count()
+        count_custom = PlanComment.objects.filter(plan_id__in=custom_plan_ids, plan_type='custom').count()
+        count = count_official + count_custom
+        subject_comments_count.append((subject.name, count))
     
     context = {
         'student_profile': student_profile,
@@ -144,6 +172,9 @@ def courses_dashboard(request):
         'semester_summary': semester_summary,
         'global_average': global_average,
         'global_credits_earned': total_earned_credits,
+        'global_credits_attempted': total_credits,
+        'academic_history': academic_history,
+        'subject_comments_count': subject_comments_count,
     }
     
     return render(request, 'student_portal/courses_dashboard.html', context)
@@ -619,6 +650,47 @@ def delete_grade(request, grade_id, grade_type):
 def reports_dashboard(request):
     """Dashboard de informes y estadísticas profesional"""
     student_profile = request.user.student_profile
+
+    # Calcular comentarios por materia (oficiales y personalizados)
+    subject_comments_count = []
+    for subject in Subject.objects.all():
+        official_plan_ids = EvaluationPlan.objects.filter(group__subject=subject).values_list('id', flat=True)
+        custom_plan_ids = CustomEvaluationPlan.objects.filter(group__subject=subject).values_list('id', flat=True)
+        count_official = PlanComment.objects.filter(plan_id__in=official_plan_ids, plan_type='official').count()
+        count_custom = PlanComment.objects.filter(plan_id__in=custom_plan_ids, plan_type='custom').count()
+        count = count_official + count_custom
+        subject_comments_count.append((subject.name, count))
+    
+    # Calcular promedios y créditos globales (igual que en courses_dashboard)
+    all_summaries = SemesterSummary.objects.filter(student=student_profile)
+    if all_summaries.exists():
+        total_credits = sum(s.credits_attempted for s in all_summaries) or 0
+        total_earned_credits = sum(s.credits_earned for s in all_summaries) or 0
+        weighted_sum = sum(float(s.average_grade) * s.credits_attempted for s in all_summaries) or 0.0
+        if total_credits > 0:
+            global_average = weighted_sum / total_credits
+        else:
+            global_average = 0.0
+    else:
+        global_average = 0.0
+        total_earned_credits = 0
+        total_credits = 0
+    
+    # Historial académico: obtener todas las materias inscritas y sus calificaciones
+    enrollments = StudentEnrollment.objects.filter(student=student_profile)
+    academic_history = []
+    for enrollment in enrollments:
+        group = enrollment.group
+        subject = group.subject
+        # Buscar la calificación final de la materia (si existe)
+        summary = SemesterSummary.objects.filter(student=student_profile, semester=subject.semester).first()
+        final_grade = summary.average_grade if summary else None
+        academic_history.append({
+            'subject': subject,
+            'group': group,
+            'final_grade': final_grade,
+            'credits': subject.credits,
+        })
     
     # Filtros por período
     period_filter = request.GET.get('period', 'all')
@@ -646,10 +718,6 @@ def reports_dashboard(request):
             chart_efficiency.append(0)
     
     # Informe 2: Análisis de materias más difíciles con estadísticas avanzadas
-    enrollments = StudentEnrollment.objects.filter(
-        student=student_profile
-    ).select_related('group__subject__semester', 'group__subject__semester__program')
-    
     subject_performance = []
     subject_stats = {
         'total_subjects': 0,
@@ -755,22 +823,68 @@ def reports_dashboard(request):
         }
     )
     
+    # --- DATOS GENERALES UNIVERSIDAD ---
+    total_students = StudentProfile.objects.count()
+    total_subjects = Subject.objects.count()
+    total_groups = Group.objects.count()
+    programs_performance = {}
+    for program in Program.objects.all():
+        students = StudentProfile.objects.filter(program=program)
+        grades = SemesterSummary.objects.filter(student__in=students)
+        total_credits = sum(s.credits_attempted for s in grades)
+        weighted_sum = sum(float(s.average_grade) * s.credits_attempted for s in grades)
+        avg = weighted_sum / total_credits if total_credits > 0 else 0.0
+        programs_performance[program.name] = {
+            'average': avg,
+            'student_count': students.count()
+        }
+    subject_difficulty = []
+    for subject in Subject.objects.all():
+        enrollments = StudentEnrollment.objects.filter(group__subject=subject)
+        if enrollments.exists():
+            grades = []
+            for enrollment in enrollments:
+                grade = enrollment.current_grade()
+                if grade > 0:
+                    grades.append(grade)
+            if grades:
+                avg_difficulty = sum(grades) / len(grades)
+                subject_difficulty.append({
+                    'subject': subject,
+                    'average_grade': avg_difficulty,
+                    'students_count': len(grades),
+                    'failure_rate': sum(1 for g in grades if g < 3.0) / len(grades) * 100
+                })
+    subject_difficulty.sort(key=lambda x: x['average_grade'])
+    system_activity = {
+        'total_comments': len(CollaborativeComment.find({})),
+        'active_plans': EvaluationPlan.objects.filter(is_approved=True).count(),
+        'custom_plans': CustomEvaluationPlan.objects.count(),
+        'grade_entries': StudentGrade.objects.count(),
+    }
     context = {
-        # Datos originales
+        # Datos personales
         'semester_summaries': semester_summaries,
         'subject_performance': subject_performance[:10],
         'subject_stats': subject_stats,
         'comparative_stats': comparative_stats,
-        
-        # Filtros
         'period_filter': period_filter,
         'semester_filter': semester_filter,
         'available_semesters': Semester.objects.all().order_by('-start_date'),
-        
-        # Configuración de alertas
         'show_alerts': len(predictions['alerts']) > 0,
+        # Datos generales
+        'total_students': total_students,
+        'total_subjects': total_subjects,
+        'total_groups': total_groups,
+        'programs_performance': programs_performance,
+        'subject_difficulty': subject_difficulty[:10],
+        'system_activity': system_activity,
+        'academic_history': academic_history,
+        'global_average': global_average,
+        'global_credits_earned': total_earned_credits,
+        'global_credits_attempted': total_credits,
+        'subject_comments_count': subject_comments_count,
     }
-    
     return render(request, 'student_portal/reports_dashboard.html', context)
 
 
@@ -848,6 +962,7 @@ class CommentManager:
     def create_comment(plan_id, plan_type, student, content, comment_type='general', 
                       activity_id=None, rating=None, tags=None, parent_comment_id=None):
         """Create a comment using available backend"""
+        print('DEBUG create_comment called with:', plan_id, plan_type, student, content, comment_type, activity_id, rating, tags, parent_comment_id)
         if MONGODB_AVAILABLE:
             try:
                 return CollaborativeComment.create_comment(
@@ -872,7 +987,7 @@ class CommentManager:
                 parent_comment = PlanComment.objects.get(id=parent_comment_id)
             except PlanComment.DoesNotExist:
                 pass
-        
+        print('DEBUG ORM fallback: creating PlanComment')
         comment = PlanComment.objects.create(
             plan_id=plan_id,
             plan_type=plan_type,
@@ -884,6 +999,7 @@ class CommentManager:
             tags=tags.split(',') if isinstance(tags, str) else tags or [],
             parent_comment=parent_comment
         )
+        print('DEBUG ORM created comment id:', comment.id)
         return comment.id
     
     @staticmethod
@@ -1728,18 +1844,18 @@ def admin_stats_dashboard(request):
     total_subjects = Subject.objects.count()
     total_groups = Group.objects.count()
     
-    # Rendimiento promedio por programa
+    # Rendimiento por programa (promedio y cantidad de estudiantes)
     programs_performance = {}
     for program in Program.objects.all():
-        summaries = SemesterSummary.objects.filter(
-            student__program=program
-        )
-        if summaries.exists():
-            avg_grade = sum(float(s.average_grade) for s in summaries) / summaries.count()
-            programs_performance[program.name] = {
-                'average': avg_grade,
-                'student_count': summaries.values('student').distinct().count()
-            }
+        students = StudentProfile.objects.filter(program=program)
+        grades = SemesterSummary.objects.filter(student__in=students)
+        total_credits = sum(s.credits_attempted for s in grades)
+        weighted_sum = sum(float(s.average_grade) * s.credits_attempted for s in grades)
+        avg = weighted_sum / total_credits if total_credits > 0 else 0.0
+        programs_performance[program.name] = {
+            'average': avg,
+            'student_count': students.count()
+        }
     
     # Materias más difíciles del sistema
     subject_difficulty = []

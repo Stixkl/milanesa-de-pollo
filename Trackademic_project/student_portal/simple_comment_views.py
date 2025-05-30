@@ -7,6 +7,7 @@ import json
 
 from nosql_data.simple_comments import SimpleComment
 from student_portal.models import EvaluationPlan, CustomEvaluationPlan
+from student_portal.views import CommentManager  # Importar el manager de comentarios
 
 
 @login_required
@@ -26,13 +27,8 @@ def simple_plan_comments(request, plan_id, plan_type):
     else:
         plan = get_object_or_404(CustomEvaluationPlan, id=plan_id)
     
-    # Obtener comentarios de MongoDB
-    comment_model = SimpleComment()
-    comments = comment_model.get_comments_for_plan(plan_id, plan_type)
-    # Normalizar el id para el template
-    for comment in comments:
-        if '_id' in comment:
-            comment['id'] = str(comment['_id'])
+    # Obtener comentarios del backend relacional
+    comments = CommentManager.get_comments_for_plan(plan_id, plan_type, include_replies=False)
     comment_count = len(comments)
     
     context = {
@@ -49,9 +45,8 @@ def simple_plan_comments(request, plan_id, plan_type):
 @require_POST
 def add_simple_comment(request, plan_id, plan_type):
     """
-    Agregar un comentario simple a un plan de evaluación.
+    Agregar un comentario simple a un plan de evaluación usando el backend relacional.
     """
-    # Validar plan_type
     if plan_type not in ['official', 'custom']:
         return JsonResponse({'success': False, 'message': 'Tipo de plan no válido.'})
     
@@ -68,19 +63,16 @@ def add_simple_comment(request, plan_id, plan_type):
             messages.error(request, 'El comentario no puede estar vacío.')
             return redirect('student_portal:simple_plan_comments', plan_id=plan_id, plan_type=plan_type)
     
-    # Obtener nombre del usuario
-    user_name = f"{request.user.first_name} {request.user.last_name}".strip()
-    if not user_name:
-        user_name = request.user.username
-    
-    # Crear comentario
-    comment_model = SimpleComment()
-    comment_id = comment_model.create_comment(
+    # Usar el backend relacional para guardar el comentario
+    student_profile = request.user.student_profile
+    comment_id = CommentManager.create_comment(
         plan_id=plan_id,
         plan_type=plan_type,
-        user_name=user_name,
-        content=content
+        student=student_profile,
+        content=content,
+        comment_type='general',
     )
+    user_name = f"{request.user.first_name} {request.user.last_name}".strip() or request.user.username
     
     if comment_id:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
