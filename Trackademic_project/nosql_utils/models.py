@@ -313,7 +313,6 @@ class PlanAnalytics(MongoDocument):
 
     @classmethod
     def record_plan_view(cls, plan_id, plan_type, user_id, view_duration=None):
-        """Registrar visualización de un plan"""
         return cls.create(
             plan_id=str(plan_id),
             plan_type=plan_type,

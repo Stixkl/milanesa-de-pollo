@@ -3,19 +3,10 @@ from nosql_utils.models import MongoDocument
 from datetime import datetime
 
 class EvaluationPlanComment(MongoDocument):
-    """
-    Modelo para almacenar comentarios sobre planes de evaluación.
-    Se utiliza MongoDB por la flexibilidad en el esquema y porque los
-    comentarios no necesitan las propiedades ACID de una base relacional.
-    """
     collection_name = 'evaluation_plan_comments'
     
     @classmethod
     def create_comment(cls, plan_id, user_id, content, user_name):
-        """
-        Crea un nuevo comentario para un plan de evaluación.
-        Se guarda información básica del usuario para evitar consultas adicionales.
-        """
         return cls.create(
             plan_id=plan_id,
             user_id=user_id,
@@ -27,7 +18,6 @@ class EvaluationPlanComment(MongoDocument):
     
     @classmethod
     def add_reply(cls, comment_id, user_id, content, user_name):
-        """Añade una respuesta a un comentario existente"""
         comment = cls.find_one({'_id': comment_id})
         if not comment:
             return None

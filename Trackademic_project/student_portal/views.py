@@ -16,71 +16,11 @@ from .models import (
 )
 from academic_data.models import Group, Subject, StudentProfile, Program
 
-# Try to import MongoDB models, fallback to Django ORM if not available
 try:
-    from nosql_utils.models import StudentActivity, UserPreference, CollaborativeComment, PlanAnalytics
-    # MONGODB_AVAILABLE = True  # COMENTADO: Forzamos el uso del backend Django ORM
-    MONGODB_AVAILABLE = False  # Forzar uso de ORM Django para depuración
+    from nosql_utils.models import CollaborativeComment, StudentActivity, PlanAnalytics
+    MONGODB_AVAILABLE = True
 except ImportError:
     MONGODB_AVAILABLE = False
-    # Create mock classes for when MongoDB is not available
-    class StudentActivity:
-        @staticmethod
-        def log_activity(student_id, activity_type, details=None):
-            pass
-        
-        @staticmethod
-        def get_student_activity_summary(student_id, days=30):
-            return {
-                'total_activities': 0,
-                'dashboard_visits': 0,
-                'grades_updated': 0,
-                'plans_created': 0,
-                'comments_made': 0,
-                'goals_set': 0
-            }
-    
-    class CollaborativeComment:
-        @staticmethod
-        def create_comment(*args, **kwargs):
-            return None
-        
-        @staticmethod
-        def get_comments_for_plan(plan_id, plan_type, include_replies=True):
-            return []
-        
-        @staticmethod
-        def get_comments_for_activity(plan_id, plan_type, activity_id):
-            return []
-        
-        @staticmethod
-        def toggle_like(comment_id, user_id):
-            return False
-        
-        @staticmethod
-        def get_comment_stats(plan_id, plan_type):
-            return {
-                'total_comments': 0,
-                'general_comments': 0,
-                'suggestions': 0,
-                'questions': 0,
-                'experiences': 0,
-                'average_rating': 0,
-                'unique_contributors': 0
-            }
-    
-    class PlanAnalytics:
-        @staticmethod
-        def record_plan_view(*args, **kwargs):
-            pass
-        
-        @staticmethod
-        def record_plan_interaction(*args, **kwargs):
-            pass
-        
-        @staticmethod
-        def get_plan_popularity(plan_type='official', limit=10):
-            return []
 
 @login_required
 def courses_dashboard(request):

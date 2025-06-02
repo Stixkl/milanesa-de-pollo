@@ -453,4 +453,4 @@ class Command(BaseCommand):
                         view_duration=random.randint(30, 300)
                     )
 
-        self.stdout.write('Datos de MongoDB creados exitosamente.') 
+        self.stdout.write('Datos de MongoDB creados exitosamente.')
