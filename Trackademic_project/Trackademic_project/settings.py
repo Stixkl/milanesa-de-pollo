@@ -173,7 +173,11 @@ LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
 LOGIN_URL = 'login'
 
-MONGODB_URI = 'mongodb://localhost:27017/'
-MONGODB_NAME = 'trackademic_nosql'
+MONGODB_URI = 'mongodb+srv://trackacademic:notitas1@clustersito1.ffpznwt.mongodb.net/'
+MONGODB_NAME = 'trackademicc'
 
-connect(db=MONGODB_NAME, host=MONGODB_URI)
+connect(
+    db=MONGODB_NAME, 
+    host=MONGODB_URI,
+    connect=False  # Evita problemas de conexión en desarrollo
+)
