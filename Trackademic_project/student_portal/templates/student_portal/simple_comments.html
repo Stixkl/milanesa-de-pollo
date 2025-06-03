@@ -156,7 +156,8 @@
         <!-- Plan Header -->
         <div class="plan-header">
             <h1 class="mb-2">{{ plan.name }}</h1>
-            <p class="mb-0 opacity-75">Comentarios y Discusión</p>
+            <p class="mb-0 opacity-75">{{ plan_type|title }} Plan: {% if plan_type == 'official' %}{{ plan.group.subject.name }}{% else %}{{ plan.group.subject.name }}{% endif %}</p>
+
         </div>
 
         <!-- Comment Stats -->

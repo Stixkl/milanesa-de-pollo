@@ -28,23 +28,26 @@ class StudentEnrollment(models.Model):
     
     def current_grade(self):
         """Calcula la nota actual del estudiante en este grupo"""
-        student_grades = StudentGrade.objects.filter(
+        # Buscar el plan oficial primero
+        official_plan = EvaluationPlan.objects.filter(group=self.group).first()
+        if official_plan:
+            # Calcular nota con el plan oficial
+            grade_info = official_plan.get_current_grade(self.student)
+            return grade_info['current_grade']
+        
+        # Si no hay plan oficial, buscar plan personalizado
+        custom_plan = CustomEvaluationPlan.objects.filter(
             student=self.student,
-            activity__plan__group=self.group
-        )
+            group=self.group
+        ).first()
         
-        total_grade = 0
-        total_percentage = 0
+        if custom_plan:
+            # Calcular nota con el plan personalizado
+            grade_info = custom_plan.get_current_grade(self.student)
+            return grade_info['current_grade']
         
-        for grade in student_grades:
-            percentage = grade.activity.percentage
-            total_grade += (grade.grade * Decimal(percentage / 100))
-            total_percentage += percentage
-            
-        if total_percentage == 0:
-            return Decimal('0.00')
-            
-        return total_grade
+        # Si no hay ningún plan, devolver 0
+        return Decimal('0.00')
     
     def get_subject_credits(self):
         """Obtiene los créditos de la asignatura asociada al grupo"""
@@ -221,6 +224,26 @@ class CustomEvaluationPlan(models.Model):
         """Verifica que los porcentajes sumen 100%"""
         total = sum(activity.percentage for activity in self.activities.all())
         return total == 100
+        
+    def get_current_grade(self, student):
+        """Calcula la nota actual para un estudiante con las actividades calificadas hasta el momento"""
+        grades = CustomGrade.objects.filter(
+            student=student,
+            activity__plan=self
+        ).select_related('activity')
+        
+        total_grade = Decimal('0.00')
+        total_percentage = 0
+        
+        for grade in grades:
+            percentage = grade.activity.percentage
+            total_grade += (grade.grade * Decimal(percentage / 100))
+            total_percentage += percentage
+            
+        return {
+            'current_grade': total_grade,
+            'graded_percentage': total_percentage
+        }
 
 
 class CustomEvaluationActivity(models.Model):

@@ -34,6 +34,10 @@ def courses_dashboard(request):
     # Obtener semestre activo para mostrar información
     active_semester = Semester.objects.filter(is_active=True).first()
     
+    # Actualizar todos los resúmenes de semestre para asegurar que los datos estén al día
+    for summary in SemesterSummary.objects.filter(student=student_profile):
+        summary.update_summary()
+    
     # Obtener TODAS las inscripciones del estudiante (sin filtrar por semestre)
     all_enrollments = StudentEnrollment.objects.filter(
         student=student_profile
@@ -83,25 +87,80 @@ def courses_dashboard(request):
     for enrollment in enrollments:
         group = enrollment.group
         subject = group.subject
+        # Calcular la nota actual directamente
+        current_grade = enrollment.current_grade()
+        
         # Buscar la calificación final de la materia (si existe)
         summary = SemesterSummary.objects.filter(student=student_profile, semester=subject.semester).first()
         final_grade = summary.average_grade if summary else None
+        
         academic_history.append({
             'subject': subject,
             'group': group,
             'final_grade': final_grade,
             'credits': subject.credits,
+            'current_grade': current_grade
         })
     
     # Contar comentarios por materia (oficiales y personalizados)
     subject_comments_count = []
     for subject in Subject.objects.all():
-        official_plan_ids = EvaluationPlan.objects.filter(group__subject=subject).values_list('id', flat=True)
-        custom_plan_ids = CustomEvaluationPlan.objects.filter(group__subject=subject).values_list('id', flat=True)
-        count_official = PlanComment.objects.filter(plan_id__in=official_plan_ids, plan_type='official').count()
-        count_custom = PlanComment.objects.filter(plan_id__in=custom_plan_ids, plan_type='custom').count()
-        count = count_official + count_custom
-        subject_comments_count.append((subject.name, count))
+        # Obtener todos los grupos de esta materia
+        groups = Group.objects.filter(subject=subject)
+        
+        # Obtener IDs de planes oficiales para estos grupos
+        official_plan_ids = list(EvaluationPlan.objects.filter(group__in=groups).values_list('id', flat=True))
+        
+        # Obtener IDs de planes personalizados para estos grupos
+        custom_plan_ids = list(CustomEvaluationPlan.objects.filter(group__in=groups).values_list('id', flat=True))
+        
+        # Contar comentarios en MongoDB si está disponible
+        mongo_count = 0
+        if MONGODB_AVAILABLE:
+            try:
+                # Comentarios en planes oficiales
+                if official_plan_ids:
+                    for plan_id in official_plan_ids:
+                        mongo_count += len(CollaborativeComment.find({
+                            'plan_id': str(plan_id), 
+                            'plan_type': 'official'
+                        }))
+                
+                # Comentarios en planes personalizados
+                if custom_plan_ids:
+                    for plan_id in custom_plan_ids:
+                        mongo_count += len(CollaborativeComment.find({
+                            'plan_id': str(plan_id), 
+                            'plan_type': 'custom'
+                        }))
+            except Exception as e:
+                print(f"Error al obtener comentarios de MongoDB: {e}")
+        
+        # Contar comentarios en la base de datos relacional
+        db_count = 0
+        if official_plan_ids:
+            db_count += PlanComment.objects.filter(
+                plan_id__in=official_plan_ids, 
+                plan_type='official'
+            ).count()
+        
+        if custom_plan_ids:
+            db_count += PlanComment.objects.filter(
+                plan_id__in=custom_plan_ids, 
+                plan_type='custom'
+            ).count()
+        
+        # Total de comentarios para esta materia
+        total_count = mongo_count + db_count
+        
+        # Solo agregar materias que tienen comentarios o mostrar todas
+        if total_count > 0:
+            subject_comments_count.append((subject.name, total_count))
+        else:
+            subject_comments_count.append((subject.name, 0))
+    
+    # Ordenar la lista de comentarios por materias por número de comentarios (de mayor a menor)
+    subject_comments_count.sort(key=lambda x: x[1], reverse=True)
     
     context = {
         'student_profile': student_profile,
@@ -168,13 +227,21 @@ def course_detail(request, group_id):
         activities = []
         grade_dict = {}
     
-    # Calcular nota actual solo si está inscrito
-    current_grade = enrollment.current_grade() if (enrollment and official_plan) else Decimal('0.00')
-    
     # Calcular progreso del curso basado en porcentaje de actividades calificadas
     total_percentage = sum(activity.percentage for activity in activities)
     graded_percentage = sum(activity.percentage for activity in activities if activity.id in grade_dict)
     progress_percentage = (graded_percentage / total_percentage * 100) if total_percentage > 0 else 0
+    
+    # Calcular la nota actual
+    current_grade = 0
+    if plan_type == 'official':
+        # Usar el método existente para planes oficiales
+        current_grade_info = active_plan.get_current_grade(student_profile)
+        current_grade = current_grade_info['current_grade']
+    else:
+        # Usar el nuevo método para planes personalizados
+        current_grade_info = active_plan.get_current_grade(student_profile)
+        current_grade = current_grade_info['current_grade']
     
     context = {
         'group': group,
@@ -185,8 +252,8 @@ def course_detail(request, group_id):
         'plan_type': plan_type,
         'activities': activities,
         'grade_dict': grade_dict,
-        'current_grade': current_grade,
         'progress_percentage': progress_percentage,
+        'current_grade': current_grade,
     }
     
     return render(request, 'student_portal/course_detail.html', context)
@@ -516,6 +583,19 @@ def manage_grades(request, group_id):
                 }
             )
             
+            # Actualizar los resúmenes de semestre para que se refleje el cambio en el promedio global
+            semester = group.subject.semester
+            summary, created = SemesterSummary.objects.get_or_create(
+                student=student_profile,
+                semester=semester
+            )
+            summary.update_summary()
+            
+            # Actualizar todos los resúmenes relacionados para asegurar que el promedio global esté al día
+            for other_summary in SemesterSummary.objects.filter(student=student_profile):
+                if other_summary.id != summary.id:
+                    other_summary.update_summary()
+            
             action = 'agregada' if created else 'actualizada'
             messages.success(request, f'Calificación {action} exitosamente.')
             
@@ -531,7 +611,10 @@ def manage_grades(request, group_id):
             activity__in=activities
         )
         grade_dict = {grade.activity_id: grade for grade in grades}
-        print('DEBUG grade_dict:', grade_dict)
+        
+        # Calcular nota actual para plan oficial
+        grade_info = active_plan.get_current_grade(student_profile)
+        current_grade = grade_info['current_grade']
     else:
         activities = active_plan.activities.all()
         grades = CustomGrade.objects.filter(
@@ -539,7 +622,10 @@ def manage_grades(request, group_id):
             activity__in=activities
         )
         grade_dict = {grade.activity_id: grade for grade in grades}
-        print('DEBUG grade_dict:', grade_dict)
+        
+        # Calcular nota actual para plan personalizado
+        grade_info = active_plan.get_current_grade(student_profile)
+        current_grade = grade_info['current_grade']
     
     # Calcular progreso del curso basado en porcentaje de actividades calificadas
     total_percentage = sum(activity.percentage for activity in activities)
@@ -554,6 +640,7 @@ def manage_grades(request, group_id):
         'grade_dict': grade_dict,
         'enrollment': enrollment,
         'progress_percentage': progress_percentage,
+        'current_grade': current_grade,
     }
     
     return render(request, 'student_portal/manage_grades.html', context)
@@ -581,6 +668,23 @@ def delete_grade(request, grade_id, grade_type):
             details={'grade_id': grade_id, 'grade_type': grade_type}
         )
         
+        # Actualizar los resúmenes de semestre para reflejar el cambio
+        if grade_type == 'official':
+            semester = grade.activity.plan.group.subject.semester
+        else:
+            semester = grade.activity.plan.group.subject.semester
+            
+        summary, created = SemesterSummary.objects.get_or_create(
+            student=student_profile,
+            semester=semester
+        )
+        summary.update_summary()
+        
+        # Actualizar todos los resúmenes relacionados para asegurar que el promedio global esté al día
+        for other_summary in SemesterSummary.objects.filter(student=student_profile):
+            if other_summary.id != summary.id:
+                other_summary.update_summary()
+        
         messages.success(request, 'Calificación eliminada exitosamente.')
     
     return redirect('student_portal:manage_grades', group_id=group_id)
@@ -591,15 +695,69 @@ def reports_dashboard(request):
     """Dashboard de informes y estadísticas profesional"""
     student_profile = request.user.student_profile
 
+    # Actualizar todos los resúmenes de semestre para asegurar que los datos estén al día
+    for summary in SemesterSummary.objects.filter(student=student_profile):
+        summary.update_summary()
+
     # Calcular comentarios por materia (oficiales y personalizados)
     subject_comments_count = []
     for subject in Subject.objects.all():
-        official_plan_ids = EvaluationPlan.objects.filter(group__subject=subject).values_list('id', flat=True)
-        custom_plan_ids = CustomEvaluationPlan.objects.filter(group__subject=subject).values_list('id', flat=True)
-        count_official = PlanComment.objects.filter(plan_id__in=official_plan_ids, plan_type='official').count()
-        count_custom = PlanComment.objects.filter(plan_id__in=custom_plan_ids, plan_type='custom').count()
-        count = count_official + count_custom
-        subject_comments_count.append((subject.name, count))
+        # Obtener todos los grupos de esta materia
+        groups = Group.objects.filter(subject=subject)
+        
+        # Obtener IDs de planes oficiales para estos grupos
+        official_plan_ids = list(EvaluationPlan.objects.filter(group__in=groups).values_list('id', flat=True))
+        
+        # Obtener IDs de planes personalizados para estos grupos
+        custom_plan_ids = list(CustomEvaluationPlan.objects.filter(group__in=groups).values_list('id', flat=True))
+        
+        # Contar comentarios en MongoDB si está disponible
+        mongo_count = 0
+        if MONGODB_AVAILABLE:
+            try:
+                # Comentarios en planes oficiales
+                if official_plan_ids:
+                    for plan_id in official_plan_ids:
+                        mongo_count += len(CollaborativeComment.find({
+                            'plan_id': str(plan_id), 
+                            'plan_type': 'official'
+                        }))
+                
+                # Comentarios en planes personalizados
+                if custom_plan_ids:
+                    for plan_id in custom_plan_ids:
+                        mongo_count += len(CollaborativeComment.find({
+                            'plan_id': str(plan_id), 
+                            'plan_type': 'custom'
+                        }))
+            except Exception as e:
+                print(f"Error al obtener comentarios de MongoDB: {e}")
+        
+        # Contar comentarios en la base de datos relacional
+        db_count = 0
+        if official_plan_ids:
+            db_count += PlanComment.objects.filter(
+                plan_id__in=official_plan_ids, 
+                plan_type='official'
+            ).count()
+        
+        if custom_plan_ids:
+            db_count += PlanComment.objects.filter(
+                plan_id__in=custom_plan_ids, 
+                plan_type='custom'
+            ).count()
+        
+        # Total de comentarios para esta materia
+        total_count = mongo_count + db_count
+        
+        # Solo agregar materias que tienen comentarios o mostrar todas
+        if total_count > 0:
+            subject_comments_count.append((subject.name, total_count))
+        else:
+            subject_comments_count.append((subject.name, 0))
+    
+    # Ordenar la lista de comentarios por materias por número de comentarios (de mayor a menor)
+    subject_comments_count.sort(key=lambda x: x[1], reverse=True)
     
     # Calcular promedios y créditos globales (igual que en courses_dashboard)
     all_summaries = SemesterSummary.objects.filter(student=student_profile)
@@ -622,14 +780,19 @@ def reports_dashboard(request):
     for enrollment in enrollments:
         group = enrollment.group
         subject = group.subject
+        # Calcular la nota actual directamente
+        current_grade = enrollment.current_grade()
+        
         # Buscar la calificación final de la materia (si existe)
         summary = SemesterSummary.objects.filter(student=student_profile, semester=subject.semester).first()
         final_grade = summary.average_grade if summary else None
+        
         academic_history.append({
             'subject': subject,
             'group': group,
             'final_grade': final_grade,
             'credits': subject.credits,
+            'current_grade': current_grade
         })
     
     # Filtros por período
@@ -796,12 +959,20 @@ def reports_dashboard(request):
                     'failure_rate': sum(1 for g in grades if g < 3.0) / len(grades) * 100
                 })
     subject_difficulty.sort(key=lambda x: x['average_grade'])
+    
+    # Calcular el total de comentarios sumando los comentarios por materia
+    total_comments = sum(count for _, count in subject_comments_count)
+    
+    # Verificar si hay comentarios
+    has_comments = total_comments > 0
+    
     system_activity = {
-        'total_comments': len(CollaborativeComment.find({})),
+        'total_comments': total_comments,
         'active_plans': EvaluationPlan.objects.filter(is_approved=True).count(),
         'custom_plans': CustomEvaluationPlan.objects.count(),
         'grade_entries': StudentGrade.objects.count(),
     }
+    
     context = {
         # Datos personales
         'semester_summaries': semester_summaries,
@@ -824,6 +995,7 @@ def reports_dashboard(request):
         'global_credits_earned': total_earned_credits,
         'global_credits_attempted': total_credits,
         'subject_comments_count': subject_comments_count,
+        'has_comments': has_comments,
     }
     return render(request, 'student_portal/reports_dashboard.html', context)
 

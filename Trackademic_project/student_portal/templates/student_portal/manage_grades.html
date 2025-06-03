@@ -43,8 +43,8 @@
                         </div>
                         <div class="col-md-4 text-end">
                             <h4>Nota Actual: 
-                                <span class="{% if enrollment.current_grade >= 3.0 %}text-success{% elif enrollment.current_grade >= 2.5 %}text-warning{% else %}text-danger{% endif %}">
-                                    {{ enrollment.current_grade|floatformat:2 }}
+                                <span class="{% if current_grade >= 3.0 %}text-success{% elif current_grade >= 2.5 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ current_grade|floatformat:2 }}
                                 </span>
                             </h4>
                         </div>

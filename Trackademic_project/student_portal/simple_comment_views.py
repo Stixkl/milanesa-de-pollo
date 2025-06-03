@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 import json
+from decimal import Decimal
 
 from nosql_data.simple_comments import SimpleComment
 from student_portal.models import EvaluationPlan, CustomEvaluationPlan
@@ -31,11 +32,24 @@ def simple_plan_comments(request, plan_id, plan_type):
     comments = CommentManager.get_comments_for_plan(plan_id, plan_type, include_replies=False)
     comment_count = len(comments)
     
+    # Calcular la nota actual si el usuario está inscrito
+    student_profile = request.user.student_profile
+    current_grade = Decimal('0.00')
+    
+    # Calcular la nota actual
+    if plan_type == 'official':
+        grade_info = plan.get_current_grade(student_profile)
+        current_grade = grade_info['current_grade']
+    else:
+        grade_info = plan.get_current_grade(student_profile)
+        current_grade = grade_info['current_grade']
+    
     context = {
         'plan': plan,
         'plan_type': plan_type,
         'comments': comments,
         'comment_count': comment_count,
+        'current_grade': current_grade,
     }
     
     return render(request, 'student_portal/simple_comments.html', context)

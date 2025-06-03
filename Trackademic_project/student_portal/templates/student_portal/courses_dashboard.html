@@ -118,14 +118,7 @@
                                         <a href="{% url 'student_portal:manage_grades' enrollment.group.id %}" class="btn btn-outline-secondary btn-sm">
                                             <i class="fas fa-edit"></i> Gestionar Notas
                                         </a>
-                                        {% if enrollment.group.evaluation_plan %}
-                                        <a href="{% url 'student_portal:simple_plan_comments' enrollment.group.evaluation_plan.id 'official' %}" class="btn btn-outline-primary btn-sm">
-                                            <i class="fas fa-comments"></i> Comentarios
-                                        </a>
-                                        {% endif %}
-                                        <button class="btn btn-outline-secondary btn-sm" disabled>
-                                            <i class="fas fa-comments"></i> Sin comentarios
-                                        </button>
+
                                         
                                     </div>
                                 </div>
